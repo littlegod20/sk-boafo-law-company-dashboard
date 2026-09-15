@@ -1,4 +1,8 @@
+"use client";
+
+import { useState } from "react";
 import { Icon } from "@/components/Icons";
+import { Modal, FormField, ModalFooter, inputCls } from "@/components/Modal";
 
 const CLIENTS = [
   { id: "CLT-001", name: "Ofori & Sons Ltd.", type: "Corporate", contact: "+233 20 811 4401", email: "info@oforiandson.gh", activeCases: 3, totalCases: 5, joined: "Mar 2022", attorney: "A. Mensah" },
@@ -16,12 +20,16 @@ const CLIENTS = [
 ];
 
 const TYPE_COLORS: Record<string, { bg: string; text: string }> = {
-  Corporate: { bg: "#EFF4FF", text: "#1d4ed8" },
+  Corporate:  { bg: "#EFF4FF", text: "#1d4ed8" },
   Individual: { bg: "#F0FDF4", text: "#15803d" },
-  Trust: { bg: "#FDF4FF", text: "#7e22ce" },
+  Trust:      { bg: "#FDF4FF", text: "#7e22ce" },
 };
 
 export default function ClientsPage() {
+  const [showAdd, setShowAdd] = useState(false);
+  const [added, setAdded] = useState(false);
+  const [form, setForm] = useState({ name: "", type: "Corporate", phone: "", email: "", address: "", attorney: "" });
+
   return (
     <div className="space-y-5 max-w-[1400px]">
       {/* Header */}
@@ -31,7 +39,11 @@ export default function ClientsPage() {
           <p className="text-sm text-[#94A3B8]">{CLIENTS.length} clients on file</p>
         </div>
         <div className="flex items-center gap-2">
-          <button className="flex items-center gap-2 rounded-lg px-4 py-2 text-[13px] font-medium text-white" style={{ background: "#0B2349" }}>
+          <button
+            className="flex items-center gap-2 rounded-lg px-4 py-2 text-[13px] font-medium text-white"
+            style={{ background: "#0B2349" }}
+            onClick={() => { setShowAdd(true); setAdded(false); }}
+          >
             <Icon name="plus" className="w-4 h-4" strokeWidth={2.5} />
             Add Client
           </button>
@@ -46,8 +58,8 @@ export default function ClientsPage() {
       <div className="grid grid-cols-3 gap-4">
         {[
           { label: "Total Clients", value: 124, icon: "users" as const, color: "#0B2349", bg: "#EFF4FF" },
-          { label: "Corporate", value: 71, icon: "building" as const, color: "#1d4ed8", bg: "#EFF4FF" },
-          { label: "Individual", value: 53, icon: "user" as const, color: "#059669", bg: "#ECFDF5" },
+          { label: "Corporate",     value: 71,  icon: "building" as const, color: "#1d4ed8", bg: "#EFF4FF" },
+          { label: "Individual",    value: 53,  icon: "user" as const, color: "#059669", bg: "#ECFDF5" },
         ].map((s) => (
           <div key={s.label} className="bg-white rounded-xl p-4 flex items-center gap-4" style={{ border: "1px solid #F1F5F9", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
             <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: s.bg }}>
@@ -122,6 +134,57 @@ export default function ClientsPage() {
           </table>
         </div>
       </div>
+
+      {/* Add Client Modal */}
+      <Modal isOpen={showAdd} onClose={() => setShowAdd(false)} title="Add New Client">
+        {added ? (
+          <div className="text-center py-6">
+            <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3" style={{ background: "#ECFDF5" }}>
+              <Icon name="check-circle" className="w-6 h-6" style={{ color: "#059669" } as React.CSSProperties} />
+            </div>
+            <p className="font-semibold text-[#1e293b]">Client added</p>
+            <p className="text-[13px] text-[#94A3B8] mt-1">The new client record has been created.</p>
+            <button className="mt-4 rounded-lg px-4 py-2 text-[13px] font-medium text-white" style={{ background: "#0B2349" }} onClick={() => setShowAdd(false)}>Done</button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2">
+                <FormField label="Full Name / Company Name" required>
+                  <input className={inputCls} placeholder="e.g. Ofori & Sons Ltd." value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} />
+                </FormField>
+              </div>
+              <FormField label="Client Type" required>
+                <select className={inputCls} value={form.type} onChange={(e) => setForm((p) => ({ ...p, type: e.target.value }))}>
+                  {["Corporate", "Individual", "Trust"].map((t) => <option key={t}>{t}</option>)}
+                </select>
+              </FormField>
+              <FormField label="Lead Attorney">
+                <select className={inputCls} value={form.attorney} onChange={(e) => setForm((p) => ({ ...p, attorney: e.target.value }))}>
+                  <option value="">Assign attorney...</option>
+                  {["A. Mensah", "K. Asante", "E. Darko", "D. Owusu"].map((a) => <option key={a}>{a}</option>)}
+                </select>
+              </FormField>
+              <FormField label="Phone Number">
+                <input className={inputCls} placeholder="+233 ..." value={form.phone} onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))} />
+              </FormField>
+              <FormField label="Email Address">
+                <input className={inputCls} type="email" placeholder="client@example.com" value={form.email} onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))} />
+              </FormField>
+              <div className="col-span-2">
+                <FormField label="Address">
+                  <input className={inputCls} placeholder="Physical address" value={form.address} onChange={(e) => setForm((p) => ({ ...p, address: e.target.value }))} />
+                </FormField>
+              </div>
+            </div>
+            <ModalFooter
+              onClose={() => setShowAdd(false)}
+              confirmLabel="Add Client"
+              onConfirm={() => { if (form.name) { setAdded(true); setForm({ name: "", type: "Corporate", phone: "", email: "", address: "", attorney: "" }); } }}
+            />
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

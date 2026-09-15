@@ -13,9 +13,10 @@ interface IconProps {
   name: IconName;
   className?: string;
   strokeWidth?: number;
+  style?: React.CSSProperties;
 }
 
-export function Icon({ name, className = "w-5 h-5", strokeWidth = 1.75 }: IconProps) {
+export function Icon({ name, className = "w-5 h-5", strokeWidth = 1.75, style }: IconProps) {
   const sw = strokeWidth;
   const paths: Record<IconName, React.ReactNode> = {
     grid: <><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></>,
@@ -75,6 +76,7 @@ export function Icon({ name, className = "w-5 h-5", strokeWidth = 1.75 }: IconPr
       strokeLinecap="round"
       strokeLinejoin="round"
       className={className}
+      style={style}
     >
       {paths[name]}
     </svg>

@@ -6,6 +6,9 @@ import Header from "@/components/Header";
 export const metadata: Metadata = {
   title: "S.K. Boafo & Company | Practice Dashboard",
   description: "Legal practice management dashboard for S.K. Boafo & Company — Gye Nyame Chambers",
+  icons: {
+    icon: "https://a.favicon.im/www.skboafoandcompany.org",
+  },
 };
 
 export default function RootLayout({

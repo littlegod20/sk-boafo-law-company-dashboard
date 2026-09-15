@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Icon } from "@/components/Icons";
+import { Modal, ConfirmDialog, FormField, ModalFooter, inputCls } from "@/components/Modal";
 
 const ALL_CASES = [
   { id: "SKB-2026-047", client: "Ofori & Sons Ltd.", clientType: "Corporate", type: "Corporate", attorney: "A. Mensah", status: "Active", filed: "01 Sep 2026", hearing: "18 Sep 2026", priority: "High" },
@@ -52,6 +53,11 @@ export default function CasesPage() {
   const [typeFilter, setTypeFilter] = useState("All Types");
   const [attyFilter, setAttyFilter] = useState("All Attorneys");
   const [search, setSearch] = useState("");
+  const [showNewCase, setShowNewCase] = useState(false);
+  const [newCase, setNewCase] = useState({
+    title: "", client: "", practiceArea: "", attorney: "", priority: "Medium", description: "",
+  });
+  const [caseAdded, setCaseAdded] = useState(false);
 
   const filtered = ALL_CASES.filter((c) => {
     if (statusFilter !== "All" && c.status !== statusFilter) return false;
@@ -73,6 +79,7 @@ export default function CasesPage() {
           <button
             className="flex items-center gap-2 rounded-lg px-4 py-2 text-[13px] font-medium text-white"
             style={{ background: "#0B2349" }}
+            onClick={() => setShowNewCase(true)}
           >
             <Icon name="plus" className="w-4 h-4" strokeWidth={2.5} />
             New Case
@@ -185,6 +192,70 @@ export default function CasesPage() {
           </div>
         )}
       </div>
+
+      {/* New Case Modal */}
+      <Modal isOpen={showNewCase} onClose={() => { setShowNewCase(false); setCaseAdded(false); }} title="Open New Case">
+        {caseAdded ? (
+          <div className="text-center py-6">
+            <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3" style={{ background: "#ECFDF5" }}>
+              <Icon name="check-circle" className="w-6 h-6" style={{ color: "#059669" } as React.CSSProperties} />
+            </div>
+            <p className="font-semibold text-[#1e293b]">Case opened successfully</p>
+            <p className="text-[13px] text-[#94A3B8] mt-1">The new matter has been added to the case list.</p>
+            <button className="mt-4 rounded-lg px-4 py-2 text-[13px] font-medium text-white" style={{ background: "#0B2349" }} onClick={() => { setShowNewCase(false); setCaseAdded(false); }}>
+              Done
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-4">
+              <FormField label="Case Title" required>
+                <input className={inputCls} placeholder="e.g. Ofori & Sons — Contract Dispute" value={newCase.title} onChange={(e) => setNewCase((p) => ({ ...p, title: e.target.value }))} />
+              </FormField>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField label="Client" required>
+                  <select className={inputCls} value={newCase.client} onChange={(e) => setNewCase((p) => ({ ...p, client: e.target.value }))}>
+                    <option value="">Select client...</option>
+                    {["Ofori & Sons Ltd.", "Ghana Mining Co.", "TeleFlex Ghana", "Accra Realty Ltd.", "Goldfields Minerals", "Adom Broadcasting"].map((c) => <option key={c}>{c}</option>)}
+                  </select>
+                </FormField>
+                <FormField label="Practice Area" required>
+                  <select className={inputCls} value={newCase.practiceArea} onChange={(e) => setNewCase((p) => ({ ...p, practiceArea: e.target.value }))}>
+                    <option value="">Select area...</option>
+                    {["Corporate", "Litigation", "Estate & Probate", "Mining & Energy", "Real Estate", "Telecom & Tech", "Employment", "Land & Chieftaincy"].map((a) => <option key={a}>{a}</option>)}
+                  </select>
+                </FormField>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField label="Assigned Attorney" required>
+                  <select className={inputCls} value={newCase.attorney} onChange={(e) => setNewCase((p) => ({ ...p, attorney: e.target.value }))}>
+                    <option value="">Select attorney...</option>
+                    {["A. Mensah", "K. Asante", "E. Darko", "D. Owusu"].map((a) => <option key={a}>{a}</option>)}
+                  </select>
+                </FormField>
+                <FormField label="Priority">
+                  <select className={inputCls} value={newCase.priority} onChange={(e) => setNewCase((p) => ({ ...p, priority: e.target.value }))}>
+                    {["High", "Medium", "Low"].map((p) => <option key={p}>{p}</option>)}
+                  </select>
+                </FormField>
+              </div>
+              <FormField label="Description">
+                <textarea className={inputCls + " resize-none"} rows={3} placeholder="Brief description of the matter..." value={newCase.description} onChange={(e) => setNewCase((p) => ({ ...p, description: e.target.value }))} />
+              </FormField>
+            </div>
+            <ModalFooter
+              onClose={() => setShowNewCase(false)}
+              confirmLabel="Open Case"
+              onConfirm={() => {
+                if (newCase.title && newCase.client) {
+                  setCaseAdded(true);
+                  setNewCase({ title: "", client: "", practiceArea: "", attorney: "", priority: "Medium", description: "" });
+                }
+              }}
+            />
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

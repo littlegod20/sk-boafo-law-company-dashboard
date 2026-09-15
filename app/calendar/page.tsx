@@ -1,4 +1,8 @@
+"use client";
+
+import { useState } from "react";
 import { Icon } from "@/components/Icons";
+import { Modal, FormField, ModalFooter, inputCls } from "@/components/Modal";
 
 const HEARINGS = [
   { date: "18 Sep 2026", day: "Thu", caseId: "SKB-2026-047", client: "Ofori & Sons Ltd.", type: "Corporate", court: "High Court — Accra", time: "9:00 AM", attorney: "A. Mensah", status: "Confirmed", urgency: "hot" },
@@ -27,12 +31,16 @@ function daysUntil(dateStr: string) {
 }
 
 function urgencyStyle(u: string) {
-  if (u === "hot") return { border: "#FCA5A5", bg: "#FFF5F5", dot: "#DC2626" };
-  if (u === "medium") return { border: "#FCD34D", bg: "#FFFBEB", dot: "#D97706" };
-  return { border: "#E2E8F0", bg: "#FAFBFC", dot: "#94A3B8" };
+  if (u === "hot") return { border: "#FCA5A5", dot: "#DC2626" };
+  if (u === "medium") return { border: "#FCD34D", dot: "#D97706" };
+  return { border: "#E2E8F0", dot: "#94A3B8" };
 }
 
 export default function CalendarPage() {
+  const [showAdd, setShowAdd] = useState(false);
+  const [added, setAdded] = useState(false);
+  const [form, setForm] = useState({ caseId: "", title: "", date: "", time: "", court: "", attorney: "" });
+
   return (
     <div className="space-y-5 max-w-[1400px]">
       <div className="flex items-center justify-between">
@@ -45,7 +53,11 @@ export default function CalendarPage() {
             <Icon name="chevron-down" className="w-4 h-4" />
             September 2026
           </button>
-          <button className="rounded-lg px-4 py-2 text-[13px] font-medium text-white flex items-center gap-2" style={{ background: "#0B2349" }}>
+          <button
+            className="rounded-lg px-4 py-2 text-[13px] font-medium text-white flex items-center gap-2"
+            style={{ background: "#0B2349" }}
+            onClick={() => { setShowAdd(true); setAdded(false); }}
+          >
             <Icon name="plus" className="w-4 h-4" strokeWidth={2.5} />
             Add Hearing
           </button>
@@ -62,15 +74,12 @@ export default function CalendarPage() {
               <button className="p-1.5 hover:bg-[#F5F7FA] rounded-lg text-[#94A3B8]"><Icon name="chevron-right" className="w-4 h-4" /></button>
             </div>
           </div>
-          {/* Days of week */}
           <div className="grid grid-cols-7 mb-2">
             {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((d) => (
               <div key={d} className="text-center text-[10px] font-semibold text-[#94A3B8] py-1">{d}</div>
             ))}
           </div>
-          {/* Dates — Sep 2026 starts on Tuesday (offset 2) */}
           <div className="grid grid-cols-7 gap-y-1">
-            {/* Offset for Tuesday */}
             {[0, 1].map((i) => <div key={`empty-${i}`} />)}
             {MONTH_DAYS.map((d) => {
               const isToday = d === 15;
@@ -79,27 +88,18 @@ export default function CalendarPage() {
               return (
                 <button
                   key={d}
-                  className="aspect-square flex flex-col items-center justify-center rounded-lg text-[11px] font-medium relative transition-colors"
-                  style={isToday
-                    ? { background: "#0B2349", color: "white" }
-                    : hasHearing
-                    ? { background: "#FEF3C7", color: "#0B2349" }
-                    : { color: "#374151" }
-                  }
+                  className="aspect-square flex flex-col items-center justify-center rounded-lg text-[11px] font-medium relative transition-colors hover:bg-[#F5F7FA]"
+                  style={isToday ? { background: "#0B2349", color: "white" } : hasHearing ? { background: "#FEF3C7", color: "#0B2349" } : { color: "#374151" }}
                 >
                   {d}
                   {(hasHearing || hasFiling) && !isToday && (
-                    <span
-                      className="absolute bottom-0.5 w-1 h-1 rounded-full"
-                      style={{ background: hasHearing ? "#C9A227" : "#DC2626" }}
-                    />
+                    <span className="absolute bottom-0.5 w-1 h-1 rounded-full" style={{ background: hasHearing ? "#C9A227" : "#DC2626" }} />
                   )}
                 </button>
               );
             })}
           </div>
 
-          {/* Legend */}
           <div className="mt-4 pt-4 border-t border-[#F1F5F9] space-y-2">
             {[
               { dot: "#C9A227", label: "Court hearing" },
@@ -113,7 +113,6 @@ export default function CalendarPage() {
             ))}
           </div>
 
-          {/* Attorney filter */}
           <div className="mt-4 pt-4 border-t border-[#F1F5F9]">
             <p className="text-[11px] font-semibold text-[#0B2349] mb-2 uppercase tracking-wide">Filter by Attorney</p>
             {["All", "A. Mensah", "K. Asante", "E. Darko", "D. Owusu"].map((a) => (
@@ -124,32 +123,21 @@ export default function CalendarPage() {
           </div>
         </div>
 
-        {/* Upcoming Hearings List */}
+        {/* Upcoming Hearings */}
         <div className="xl:col-span-2 space-y-3">
           {HEARINGS.map((h, i) => {
             const s = urgencyStyle(h.urgency);
             return (
-              <div
-                key={i}
-                className="bg-white rounded-xl p-4 border transition-shadow hover:shadow-md"
-                style={{ borderColor: s.border, background: "white" }}
-              >
+              <div key={i} className="bg-white rounded-xl p-4 border transition-shadow hover:shadow-md" style={{ borderColor: s.border }}>
                 <div className="flex items-start gap-4">
-                  {/* Date block */}
                   <div
                     className="flex-shrink-0 w-14 text-center rounded-lg py-2"
                     style={{ background: h.urgency === "hot" ? "#0B2349" : "#F5F7FA" }}
                   >
                     <p className="text-[10px] font-semibold uppercase" style={{ color: h.urgency === "hot" ? "#C9A227" : "#94A3B8" }}>{h.day}</p>
-                    <p className="text-xl font-bold" style={{ color: h.urgency === "hot" ? "white" : "#0B2349" }}>
-                      {h.date.split(" ")[0]}
-                    </p>
-                    <p className="text-[10px]" style={{ color: h.urgency === "hot" ? "rgba(255,255,255,0.6)" : "#94A3B8" }}>
-                      {h.date.split(" ")[1]}
-                    </p>
+                    <p className="text-xl font-bold" style={{ color: h.urgency === "hot" ? "white" : "#0B2349" }}>{h.date.split(" ")[0]}</p>
+                    <p className="text-[10px]" style={{ color: h.urgency === "hot" ? "rgba(255,255,255,0.6)" : "#94A3B8" }}>{h.date.split(" ")[1]}</p>
                   </div>
-
-                  {/* Details */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2 flex-wrap">
                       <div>
@@ -157,31 +145,16 @@ export default function CalendarPage() {
                         <p className="text-[11px] text-[#94A3B8] font-mono">{h.caseId} · {h.type}</p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span
-                          className="text-[10px] font-medium px-2 py-0.5 rounded-full"
-                          style={h.status === "Confirmed"
-                            ? { background: "#ECFDF5", color: "#059669" }
-                            : { background: "#FFFBEB", color: "#D97706" }
-                          }
-                        >
+                        <span className="text-[10px] font-medium px-2 py-0.5 rounded-full" style={h.status === "Confirmed" ? { background: "#ECFDF5", color: "#059669" } : { background: "#FFFBEB", color: "#D97706" }}>
                           {h.status}
                         </span>
                         <span className="text-[10px] text-[#94A3B8]">{daysUntil(h.date)}</span>
                       </div>
                     </div>
                     <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
-                      <span className="flex items-center gap-1.5 text-[11px] text-[#64748B]">
-                        <Icon name="building" className="w-3 h-3" />
-                        {h.court}
-                      </span>
-                      <span className="flex items-center gap-1.5 text-[11px] text-[#64748B]">
-                        <Icon name="clock" className="w-3 h-3" />
-                        {h.time}
-                      </span>
-                      <span className="flex items-center gap-1.5 text-[11px] text-[#64748B]">
-                        <Icon name="user" className="w-3 h-3" />
-                        {h.attorney}
-                      </span>
+                      <span className="flex items-center gap-1.5 text-[11px] text-[#64748B]"><Icon name="building" className="w-3 h-3" />{h.court}</span>
+                      <span className="flex items-center gap-1.5 text-[11px] text-[#64748B]"><Icon name="clock" className="w-3 h-3" />{h.time}</span>
+                      <span className="flex items-center gap-1.5 text-[11px] text-[#64748B]"><Icon name="user" className="w-3 h-3" />{h.attorney}</span>
                     </div>
                   </div>
                 </div>
@@ -190,6 +163,58 @@ export default function CalendarPage() {
           })}
         </div>
       </div>
+
+      {/* Add Hearing Modal */}
+      <Modal isOpen={showAdd} onClose={() => setShowAdd(false)} title="Add Court Hearing">
+        {added ? (
+          <div className="text-center py-6">
+            <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3" style={{ background: "#ECFDF5" }}>
+              <Icon name="check-circle" className="w-6 h-6" style={{ color: "#059669" } as React.CSSProperties} />
+            </div>
+            <p className="font-semibold text-[#1e293b]">Hearing scheduled</p>
+            <p className="text-[13px] text-[#94A3B8] mt-1">The hearing has been added to the court calendar.</p>
+            <button className="mt-4 rounded-lg px-4 py-2 text-[13px] font-medium text-white" style={{ background: "#0B2349" }} onClick={() => setShowAdd(false)}>Done</button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <FormField label="Case ID" required>
+                <select className={inputCls} value={form.caseId} onChange={(e) => setForm((p) => ({ ...p, caseId: e.target.value }))}>
+                  <option value="">Select case...</option>
+                  {["SKB-2026-047", "SKB-2026-046", "SKB-2026-045", "SKB-2026-044", "SKB-2026-043", "SKB-2026-041", "SKB-2026-040"].map((c) => <option key={c}>{c}</option>)}
+                </select>
+              </FormField>
+              <FormField label="Hearing Title" required>
+                <input className={inputCls} placeholder="e.g. Preliminary Hearing" value={form.title} onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))} />
+              </FormField>
+              <FormField label="Date" required>
+                <input type="date" className={inputCls} value={form.date} onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))} />
+              </FormField>
+              <FormField label="Time" required>
+                <input type="time" className={inputCls} value={form.time} onChange={(e) => setForm((p) => ({ ...p, time: e.target.value }))} />
+              </FormField>
+              <div className="col-span-2">
+                <FormField label="Court / Venue" required>
+                  <input className={inputCls} placeholder="e.g. High Court — Accra" value={form.court} onChange={(e) => setForm((p) => ({ ...p, court: e.target.value }))} />
+                </FormField>
+              </div>
+              <div className="col-span-2">
+                <FormField label="Assigned Attorney">
+                  <select className={inputCls} value={form.attorney} onChange={(e) => setForm((p) => ({ ...p, attorney: e.target.value }))}>
+                    <option value="">Select attorney...</option>
+                    {["A. Mensah", "K. Asante", "E. Darko", "D. Owusu"].map((a) => <option key={a}>{a}</option>)}
+                  </select>
+                </FormField>
+              </div>
+            </div>
+            <ModalFooter
+              onClose={() => setShowAdd(false)}
+              confirmLabel="Schedule Hearing"
+              onConfirm={() => { if (form.caseId && form.date) { setAdded(true); setForm({ caseId: "", title: "", date: "", time: "", court: "", attorney: "" }); } }}
+            />
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

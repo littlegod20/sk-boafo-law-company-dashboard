@@ -1,4 +1,8 @@
+"use client";
+
+import { useState } from "react";
 import { Icon } from "@/components/Icons";
+import { Modal, FormField, ModalFooter, inputCls } from "@/components/Modal";
 
 const STAFF = [
   { id: "STF-001", initials: "SK", name: "S.K. Boafo", role: "Managing Partner", dept: "Litigation & Corporate", activeCases: 0, totalCases: 312, joined: "1976", email: "sk@skboafo.gh", phone: "+233 36 219 5442", color: "#C9A227" },
@@ -29,6 +33,10 @@ const DEPT_SUMMARY = [
 ];
 
 export default function StaffPage() {
+  const [showAdd, setShowAdd] = useState(false);
+  const [added, setAdded] = useState(false);
+  const [form, setForm] = useState({ name: "", role: "", dept: "", email: "", phone: "" });
+
   return (
     <div className="space-y-5 max-w-[1400px]">
       <div className="flex items-center justify-between">
@@ -36,7 +44,11 @@ export default function StaffPage() {
           <h2 className="text-lg font-bold text-[#0B2349]">Staff & Team</h2>
           <p className="text-sm text-[#94A3B8]">{STAFF.length} team members</p>
         </div>
-        <button className="flex items-center gap-2 rounded-lg px-4 py-2 text-[13px] font-medium text-white" style={{ background: "#0B2349" }}>
+        <button
+          className="flex items-center gap-2 rounded-lg px-4 py-2 text-[13px] font-medium text-white"
+          style={{ background: "#0B2349" }}
+          onClick={() => { setShowAdd(true); setAdded(false); }}
+        >
           <Icon name="plus" className="w-4 h-4" strokeWidth={2.5} />
           Add Member
         </button>
@@ -116,6 +128,53 @@ export default function StaffPage() {
           ))}
         </div>
       </div>
+
+      {/* Add Member Modal */}
+      <Modal isOpen={showAdd} onClose={() => setShowAdd(false)} title="Add Team Member">
+        {added ? (
+          <div className="text-center py-6">
+            <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3" style={{ background: "#ECFDF5" }}>
+              <Icon name="check-circle" className="w-6 h-6" style={{ color: "#059669" } as React.CSSProperties} />
+            </div>
+            <p className="font-semibold text-[#1e293b]">Member added</p>
+            <p className="text-[13px] text-[#94A3B8] mt-1">The new team member has been added to the firm directory.</p>
+            <button className="mt-4 rounded-lg px-4 py-2 text-[13px] font-medium text-white" style={{ background: "#0B2349" }} onClick={() => setShowAdd(false)}>Done</button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2">
+                <FormField label="Full Name" required>
+                  <input className={inputCls} placeholder="e.g. Kwame Acheampong" value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} />
+                </FormField>
+              </div>
+              <FormField label="Role" required>
+                <select className={inputCls} value={form.role} onChange={(e) => setForm((p) => ({ ...p, role: e.target.value }))}>
+                  <option value="">Select role...</option>
+                  {["Managing Partner", "Partner", "Associate", "Paralegal", "Admin / Secretary"].map((r) => <option key={r}>{r}</option>)}
+                </select>
+              </FormField>
+              <FormField label="Department / Practice Area" required>
+                <select className={inputCls} value={form.dept} onChange={(e) => setForm((p) => ({ ...p, dept: e.target.value }))}>
+                  <option value="">Select department...</option>
+                  {["Litigation & Corporate", "Corporate & Telecom", "Estate & Probate, Land", "Mining, Energy & Tech", "Real Estate, Employment", "All Practice Areas", "Administration"].map((d) => <option key={d}>{d}</option>)}
+                </select>
+              </FormField>
+              <FormField label="Email Address" required>
+                <input type="email" className={inputCls} placeholder="name@skboafo.gh" value={form.email} onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))} />
+              </FormField>
+              <FormField label="Phone Number">
+                <input className={inputCls} placeholder="+233 ..." value={form.phone} onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))} />
+              </FormField>
+            </div>
+            <ModalFooter
+              onClose={() => setShowAdd(false)}
+              confirmLabel="Add Member"
+              onConfirm={() => { if (form.name && form.role) { setAdded(true); setForm({ name: "", role: "", dept: "", email: "", phone: "" }); } }}
+            />
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

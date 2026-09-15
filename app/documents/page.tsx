@@ -1,4 +1,8 @@
+"use client";
+
+import { useState } from "react";
 import { Icon } from "@/components/Icons";
+import { Modal, FormField, ModalFooter, inputCls } from "@/components/Modal";
 
 const DOCUMENTS = [
   { id: "DOC-2026-089", name: "Amended Settlement Agreement.pdf", type: "Settlement Agreement", case: "SKB-2026-047", client: "Ofori & Sons Ltd.", uploadedBy: "A. Mensah", date: "14 Sep 2026", size: "248 KB", status: "Pending Approval" },
@@ -30,7 +34,18 @@ const STATUS_STYLES: Record<string, { bg: string; text: string }> = {
   Rejected: { bg: "#FFF5F5", text: "#DC2626" },
 };
 
+const STATUS_FILTERS = ["All", "Pending Approval", "Approved", "Rejected"];
+
 export default function DocumentsPage() {
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [showUpload, setShowUpload] = useState(false);
+  const [uploaded, setUploaded] = useState(false);
+  const [form, setForm] = useState({ name: "", caseId: "", docType: "", attorney: "" });
+
+  const filtered = DOCUMENTS.filter((d) =>
+    statusFilter === "All" ? true : d.status === statusFilter
+  );
+
   return (
     <div className="space-y-5 max-w-[1400px]">
       <div className="flex items-center justify-between">
@@ -39,7 +54,11 @@ export default function DocumentsPage() {
           <p className="text-sm text-[#94A3B8]">{DOCUMENTS.length} documents — all matters</p>
         </div>
         <div className="flex gap-2">
-          <button className="flex items-center gap-2 rounded-lg px-4 py-2 text-[13px] font-medium text-white" style={{ background: "#0B2349" }}>
+          <button
+            className="flex items-center gap-2 rounded-lg px-4 py-2 text-[13px] font-medium text-white"
+            style={{ background: "#0B2349" }}
+            onClick={() => { setShowUpload(true); setUploaded(false); }}
+          >
             <Icon name="upload" className="w-4 h-4" strokeWidth={2} />
             Upload Document
           </button>
@@ -75,11 +94,12 @@ export default function DocumentsPage() {
           <Icon name="search" className="w-3.5 h-3.5 text-[#94A3B8]" strokeWidth={2} />
           <input type="text" placeholder="Search documents..." className="flex-1 bg-transparent text-[13px] placeholder-[#94A3B8] outline-none text-[#1e293b]" />
         </div>
-        {["All", "Pending Approval", "Approved", "Rejected"].map((s) => (
+        {STATUS_FILTERS.map((s) => (
           <button
             key={s}
+            onClick={() => setStatusFilter(s)}
             className="rounded-lg px-3 py-1.5 text-[12px] font-medium transition-colors"
-            style={s === "All" ? { background: "#0B2349", color: "white" } : { background: "#F5F7FA", color: "#64748B" }}
+            style={statusFilter === s ? { background: "#0B2349", color: "white" } : { background: "#F5F7FA", color: "#64748B" }}
           >
             {s}
           </button>
@@ -100,7 +120,7 @@ export default function DocumentsPage() {
               </tr>
             </thead>
             <tbody>
-              {DOCUMENTS.map((doc) => {
+              {filtered.map((doc) => {
                 const t = TYPE_ICON_MAP[doc.type] ?? TYPE_ICON_MAP.Application;
                 const ss = STATUS_STYLES[doc.status] ?? STATUS_STYLES.Approved;
                 return (
@@ -140,6 +160,59 @@ export default function DocumentsPage() {
           </table>
         </div>
       </div>
+
+      {/* Upload Document Modal */}
+      <Modal isOpen={showUpload} onClose={() => setShowUpload(false)} title="Upload Document">
+        {uploaded ? (
+          <div className="text-center py-6">
+            <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3" style={{ background: "#ECFDF5" }}>
+              <Icon name="check-circle" className="w-6 h-6" style={{ color: "#059669" } as React.CSSProperties} />
+            </div>
+            <p className="font-semibold text-[#1e293b]">Document uploaded</p>
+            <p className="text-[13px] text-[#94A3B8] mt-1">The document has been queued for approval.</p>
+            <button className="mt-4 rounded-lg px-4 py-2 text-[13px] font-medium text-white" style={{ background: "#0B2349" }} onClick={() => setShowUpload(false)}>Done</button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div
+              className="rounded-xl p-6 text-center border-2 border-dashed border-[#E2E8F0] hover:border-[#0B2349] transition-colors cursor-pointer"
+              style={{ background: "#FAFBFC" }}
+            >
+              <Icon name="upload" className="w-8 h-8 mx-auto mb-2 text-[#94A3B8]" />
+              <p className="text-[13px] font-medium text-[#374151]">Click to select a file or drag and drop</p>
+              <p className="text-[11px] text-[#94A3B8] mt-1">PDF, DOCX, XLSX — max 50 MB</p>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <FormField label="Document Name" required>
+                <input className={inputCls} placeholder="e.g. Settlement Agreement.pdf" value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} />
+              </FormField>
+              <FormField label="Case ID" required>
+                <select className={inputCls} value={form.caseId} onChange={(e) => setForm((p) => ({ ...p, caseId: e.target.value }))}>
+                  <option value="">Select case...</option>
+                  {["SKB-2026-047", "SKB-2026-046", "SKB-2026-045", "SKB-2026-043", "SKB-2026-041", "SKB-2026-040", "SKB-2026-039"].map((c) => <option key={c}>{c}</option>)}
+                </select>
+              </FormField>
+              <FormField label="Document Type" required>
+                <select className={inputCls} value={form.docType} onChange={(e) => setForm((p) => ({ ...p, docType: e.target.value }))}>
+                  <option value="">Select type...</option>
+                  {["Settlement Agreement", "Retainer Agreement", "Court Filing", "Power of Attorney", "Application", "Deed", "Contract", "Will"].map((t) => <option key={t}>{t}</option>)}
+                </select>
+              </FormField>
+              <FormField label="Uploaded By">
+                <select className={inputCls} value={form.attorney} onChange={(e) => setForm((p) => ({ ...p, attorney: e.target.value }))}>
+                  <option value="">Select attorney...</option>
+                  {["A. Mensah", "K. Asante", "E. Darko", "D. Owusu"].map((a) => <option key={a}>{a}</option>)}
+                </select>
+              </FormField>
+            </div>
+            <ModalFooter
+              onClose={() => setShowUpload(false)}
+              confirmLabel="Upload Document"
+              onConfirm={() => { if (form.name && form.caseId) { setUploaded(true); setForm({ name: "", caseId: "", docType: "", attorney: "" }); } }}
+            />
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

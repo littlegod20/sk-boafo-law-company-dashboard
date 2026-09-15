@@ -1,6 +1,10 @@
-import { Icon } from "@/components/Icons";
+"use client";
 
-const ANNOUNCEMENTS = [
+import { useState } from "react";
+import { Icon } from "@/components/Icons";
+import { Modal, FormField, ModalFooter, inputCls } from "@/components/Modal";
+
+const INITIAL_ANNOUNCEMENTS = [
   {
     id: 1, type: "Urgent", from: "S.K. Boafo (Managing Partner)", title: "Court Holiday — 23 September 2026",
     body: "Please note that all courts will be closed on 23 September 2026 for a public holiday. All scheduled hearings on that date will be rescheduled. Affected attorneys should contact the registry immediately.",
@@ -36,21 +40,36 @@ const TYPE_STYLES: Record<string, { bg: string; text: string; border: string }> 
 };
 
 export default function AnnouncementsPage() {
+  const [announcements, setAnnouncements] = useState(INITIAL_ANNOUNCEMENTS);
+  const [showPost, setShowPost] = useState(false);
+  const [posted, setPosted] = useState(false);
+  const [form, setForm] = useState({ title: "", type: "Update", from: "", body: "" });
+
+  const unread = announcements.filter((a) => !a.read).length;
+
+  const toggleRead = (id: number) => {
+    setAnnouncements((prev) => prev.map((a) => a.id === id ? { ...a, read: !a.read } : a));
+  };
+
   return (
     <div className="space-y-5 max-w-[900px]">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-bold text-[#0B2349]">Announcements</h2>
-          <p className="text-sm text-[#94A3B8]">2 unread</p>
+          <p className="text-sm text-[#94A3B8]">{unread} unread</p>
         </div>
-        <button className="flex items-center gap-2 rounded-lg px-4 py-2 text-[13px] font-medium text-white" style={{ background: "#0B2349" }}>
+        <button
+          className="flex items-center gap-2 rounded-lg px-4 py-2 text-[13px] font-medium text-white"
+          style={{ background: "#0B2349" }}
+          onClick={() => { setShowPost(true); setPosted(false); }}
+        >
           <Icon name="plus" className="w-4 h-4" strokeWidth={2.5} />
           Post Announcement
         </button>
       </div>
 
       <div className="space-y-4">
-        {ANNOUNCEMENTS.map((a) => {
+        {announcements.map((a) => {
           const ts = TYPE_STYLES[a.type] ?? TYPE_STYLES.Update;
           return (
             <div
@@ -88,7 +107,10 @@ export default function AnnouncementsPage() {
                   <p className="text-[13px] text-[#374151] leading-relaxed">{a.body}</p>
 
                   <div className="mt-4 flex gap-2">
-                    <button className="rounded-lg px-3 py-1.5 text-[12px] font-medium bg-[#F5F7FA] text-[#0B2349] hover:bg-[#EFF4FF] transition-colors">
+                    <button
+                      className="rounded-lg px-3 py-1.5 text-[12px] font-medium bg-[#F5F7FA] text-[#0B2349] hover:bg-[#EFF4FF] transition-colors"
+                      onClick={() => toggleRead(a.id)}
+                    >
                       {a.read ? "Mark Unread" : "Mark as Read"}
                     </button>
                   </div>
@@ -98,6 +120,59 @@ export default function AnnouncementsPage() {
           );
         })}
       </div>
+
+      {/* Post Announcement Modal */}
+      <Modal isOpen={showPost} onClose={() => setShowPost(false)} title="Post Announcement">
+        {posted ? (
+          <div className="text-center py-6">
+            <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3" style={{ background: "#ECFDF5" }}>
+              <Icon name="check-circle" className="w-6 h-6" style={{ color: "#059669" } as React.CSSProperties} />
+            </div>
+            <p className="font-semibold text-[#1e293b]">Announcement posted</p>
+            <p className="text-[13px] text-[#94A3B8] mt-1">The announcement has been shared with all firm members.</p>
+            <button className="mt-4 rounded-lg px-4 py-2 text-[13px] font-medium text-white" style={{ background: "#0B2349" }} onClick={() => setShowPost(false)}>Done</button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2">
+                <FormField label="Title" required>
+                  <input className={inputCls} placeholder="e.g. Court Holiday — 30 September" value={form.title} onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))} />
+                </FormField>
+              </div>
+              <FormField label="Type" required>
+                <select className={inputCls} value={form.type} onChange={(e) => setForm((p) => ({ ...p, type: e.target.value }))}>
+                  {["Update", "Urgent", "Policy", "HR"].map((t) => <option key={t}>{t}</option>)}
+                </select>
+              </FormField>
+              <FormField label="From" required>
+                <input className={inputCls} placeholder="e.g. A. Mensah (Partner)" value={form.from} onChange={(e) => setForm((p) => ({ ...p, from: e.target.value }))} />
+              </FormField>
+              <div className="col-span-2">
+                <FormField label="Message" required>
+                  <textarea
+                    className={inputCls + " resize-none"}
+                    rows={4}
+                    placeholder="Write your announcement here..."
+                    value={form.body}
+                    onChange={(e) => setForm((p) => ({ ...p, body: e.target.value }))}
+                  />
+                </FormField>
+              </div>
+            </div>
+            <ModalFooter
+              onClose={() => setShowPost(false)}
+              confirmLabel="Post Announcement"
+              onConfirm={() => {
+                if (form.title && form.body) {
+                  setPosted(true);
+                  setForm({ title: "", type: "Update", from: "", body: "" });
+                }
+              }}
+            />
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }
