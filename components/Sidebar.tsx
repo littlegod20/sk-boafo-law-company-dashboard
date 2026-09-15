@@ -1,10 +1,10 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
 import { Icon } from "./Icons";
-import { ConfirmDialog } from "./Modal";
+import { ConfirmDialog, Modal, FormField, ModalFooter, inputCls } from "./Modal";
 
 const NAV_ITEMS = [
   { href: "/", label: "Dashboard", icon: "grid" as const },
@@ -30,19 +30,51 @@ const ROLES = [
   { id: "admin", label: "Admin", color: "#7C3AED" },
 ];
 
-const PROFILE_MENU = [
-  { icon: "user" as const, label: "My Profile" },
-  { icon: "settings" as const, label: "Account Settings" },
-  { icon: "shield" as const, label: "Change Password" },
-];
+interface StoredUser {
+  name: string;
+  role: string;
+  email: string;
+}
+
+function initials(name: string) {
+  return name
+    .split(" ")
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase();
+}
 
 export default function Sidebar() {
-  const pathname = usePathname();
-  const [activeRole, setActiveRole] = useState("managing_partner");
-  const [roleOpen, setRoleOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
-  const [profileOpen, setProfileOpen] = useState(false);
+  const pathname  = usePathname();
+  const router    = useRouter();
+
+  const [activeRole, setActiveRole]       = useState("managing_partner");
+  const [roleOpen, setRoleOpen]           = useState(false);
+  const [collapsed, setCollapsed]         = useState(false);
+  const [profileOpen, setProfileOpen]     = useState(false);
   const [confirmSignOut, setConfirmSignOut] = useState(false);
+
+  // Modals
+  const [showProfile, setShowProfile]             = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [pwSaved, setPwSaved]                     = useState(false);
+  const [pwForm, setPwForm] = useState({ current: "", next: "", confirm: "" });
+  const [pwError, setPwError] = useState("");
+
+  // Logged-in user from localStorage
+  const [loggedUser, setLoggedUser] = useState<StoredUser>({
+    name: "S.K. Boafo",
+    role: "Managing Partner",
+    email: "sk.boafo@skboafo.gh",
+  });
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("sk_boafo_user");
+      if (raw) setLoggedUser(JSON.parse(raw));
+    } catch {}
+  }, []);
 
   const profileRef = useRef<HTMLDivElement>(null);
 
@@ -59,6 +91,35 @@ export default function Sidebar() {
     document.addEventListener("mousedown", handle);
     return () => document.removeEventListener("mousedown", handle);
   }, [profileOpen]);
+
+  const handleMenuAction = (label: string) => {
+    setProfileOpen(false);
+    if (label === "My Profile") {
+      setShowProfile(true);
+    } else if (label === "Account Settings") {
+      router.push("/settings");
+    } else if (label === "Change Password") {
+      setPwForm({ current: "", next: "", confirm: "" });
+      setPwError("");
+      setPwSaved(false);
+      setShowChangePassword(true);
+    }
+  };
+
+  const handleSignOut = () => {
+    localStorage.removeItem("sk_boafo_auth");
+    localStorage.removeItem("sk_boafo_user");
+    router.push("/login");
+  };
+
+  const handleChangePassword = () => {
+    if (!pwForm.current) { setPwError("Please enter your current password."); return; }
+    if (pwForm.next.length < 8) { setPwError("New password must be at least 8 characters."); return; }
+    if (pwForm.next !== pwForm.confirm) { setPwError("New passwords do not match."); return; }
+    setPwError("");
+    setPwSaved(true);
+    setTimeout(() => setShowChangePassword(false), 1200);
+  };
 
   return (
     <>
@@ -281,11 +342,21 @@ export default function Sidebar() {
                 boxShadow: "0 8px 32px rgba(0,0,0,0.35)",
               }}
             >
-              {PROFILE_MENU.map((item) => (
+              {/* User info header inside popover */}
+              <div className="px-4 py-3 border-b" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
+                <p className="text-white text-[13px] font-semibold truncate">{loggedUser.name}</p>
+                <p className="text-[11px] truncate" style={{ color: "rgba(255,255,255,0.5)" }}>{loggedUser.email}</p>
+              </div>
+
+              {[
+                { icon: "user" as const,     label: "My Profile" },
+                { icon: "settings" as const, label: "Account Settings" },
+                { icon: "shield" as const,   label: "Change Password" },
+              ].map((item) => (
                 <button
                   key={item.label}
                   className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-white/10 transition-colors text-left"
-                  onClick={() => setProfileOpen(false)}
+                  onClick={() => handleMenuAction(item.label)}
                 >
                   <Icon name={item.icon} className="w-4 h-4" style={{ color: "rgba(255,255,255,0.45)" }} />
                   <span className="text-[13px]" style={{ color: "rgba(255,255,255,0.8)" }}>
@@ -312,20 +383,20 @@ export default function Sidebar() {
               collapsed ? "justify-center px-0" : "px-4"
             }`}
             onClick={() => !collapsed && setProfileOpen(!profileOpen)}
-            title={collapsed ? "S.K. Boafo — Managing Partner" : undefined}
+            title={collapsed ? `${loggedUser.name} — ${loggedUser.role}` : undefined}
           >
             <div
               className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-bold"
               style={{ background: "#C9A227", color: "#0B2349" }}
             >
-              SK
+              {initials(loggedUser.name)}
             </div>
             {!collapsed && (
               <>
                 <div className="flex-1 min-w-0 text-left">
-                  <p className="text-white text-xs font-medium truncate">S.K. Boafo</p>
+                  <p className="text-white text-xs font-medium truncate">{loggedUser.name}</p>
                   <p className="text-[11px] truncate" style={{ color: "rgba(255,255,255,0.45)" }}>
-                    Managing Partner
+                    {loggedUser.role}
                   </p>
                 </div>
                 <Icon
@@ -340,19 +411,137 @@ export default function Sidebar() {
         </div>
       </aside>
 
-      {/* Sign-out confirm dialog — rendered outside the sidebar */}
+      {/* ------------------------------------------------------------------ */}
+      {/* Sign-out confirm dialog                                             */}
+      {/* ------------------------------------------------------------------ */}
       <ConfirmDialog
         isOpen={confirmSignOut}
         onClose={() => setConfirmSignOut(false)}
-        onConfirm={() => {
-          // In a real app: call auth signOut here
-          setConfirmSignOut(false);
-        }}
+        onConfirm={handleSignOut}
         title="Sign out?"
         message="You will be signed out of the S.K. Boafo & Company dashboard. Any unsaved changes will be lost."
         confirmLabel="Sign Out"
         variant="danger"
       />
+
+      {/* ------------------------------------------------------------------ */}
+      {/* My Profile modal                                                    */}
+      {/* ------------------------------------------------------------------ */}
+      <Modal isOpen={showProfile} onClose={() => setShowProfile(false)} title="My Profile" size="sm">
+        <div className="flex flex-col items-center gap-4 py-2">
+          {/* Avatar */}
+          <div
+            className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold"
+            style={{ background: "#0B2349", color: "#C9A227" }}
+          >
+            {initials(loggedUser.name)}
+          </div>
+          <div className="text-center">
+            <p className="text-[17px] font-bold text-[#0B2349]">{loggedUser.name}</p>
+            <p className="text-[13px] text-[#64748B]">{loggedUser.role}</p>
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-xl border border-[#E2E8F0] divide-y divide-[#F1F5F9] overflow-hidden">
+          {[
+            { label: "Email",        value: loggedUser.email },
+            { label: "Phone",        value: "+233 30 277 0000" },
+            { label: "Department",   value: "Litigation & Dispute Resolution" },
+            { label: "Bar Number",   value: "GHA-BAR-2009-0047" },
+            { label: "Joined",       value: "January 2009" },
+          ].map(({ label, value }) => (
+            <div key={label} className="flex items-center justify-between px-4 py-3">
+              <span className="text-[11px] font-semibold uppercase tracking-wide text-[#94A3B8]">{label}</span>
+              <span className="text-[13px] text-[#1e293b] font-medium">{value}</span>
+            </div>
+          ))}
+        </div>
+
+        <ModalFooter>
+          <button
+            onClick={() => { setShowProfile(false); router.push("/settings"); }}
+            className="flex-1 rounded-lg py-2 text-[13px] font-semibold text-white transition-opacity hover:opacity-90"
+            style={{ background: "#0B2349" }}
+          >
+            Edit in Account Settings
+          </button>
+        </ModalFooter>
+      </Modal>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Change Password modal                                               */}
+      {/* ------------------------------------------------------------------ */}
+      <Modal
+        isOpen={showChangePassword}
+        onClose={() => setShowChangePassword(false)}
+        title="Change Password"
+        size="sm"
+      >
+        {pwSaved ? (
+          <div className="flex flex-col items-center gap-3 py-6">
+            <div
+              className="w-12 h-12 rounded-full flex items-center justify-center"
+              style={{ background: "#ECFDF5" }}
+            >
+              <Icon name="check-circle" className="w-6 h-6" style={{ color: "#059669" }} />
+            </div>
+            <p className="text-[15px] font-semibold text-[#0B2349]">Password updated</p>
+            <p className="text-[13px] text-[#64748B] text-center">Your password has been changed successfully.</p>
+          </div>
+        ) : (
+          <>
+            <div className="space-y-4">
+              <FormField label="Current Password">
+                <input
+                  type="password"
+                  placeholder="Enter current password"
+                  className={inputCls}
+                  value={pwForm.current}
+                  onChange={(e) => { setPwForm((f) => ({ ...f, current: e.target.value })); setPwError(""); }}
+                />
+              </FormField>
+              <FormField label="New Password">
+                <input
+                  type="password"
+                  placeholder="Min. 8 characters"
+                  className={inputCls}
+                  value={pwForm.next}
+                  onChange={(e) => { setPwForm((f) => ({ ...f, next: e.target.value })); setPwError(""); }}
+                />
+              </FormField>
+              <FormField label="Confirm New Password">
+                <input
+                  type="password"
+                  placeholder="Repeat new password"
+                  className={inputCls}
+                  value={pwForm.confirm}
+                  onChange={(e) => { setPwForm((f) => ({ ...f, confirm: e.target.value })); setPwError(""); }}
+                />
+              </FormField>
+              {pwError && (
+                <p className="text-[12px] text-[#DC2626] rounded-lg px-3 py-2" style={{ background: "#FFF5F5", border: "1px solid #FCA5A5" }}>
+                  {pwError}
+                </p>
+              )}
+            </div>
+            <ModalFooter>
+              <button
+                onClick={() => setShowChangePassword(false)}
+                className="flex-1 rounded-lg py-2 text-[13px] font-medium border border-[#E2E8F0] text-[#64748B] hover:bg-[#F5F7FA] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleChangePassword}
+                className="flex-1 rounded-lg py-2 text-[13px] font-semibold text-white transition-opacity hover:opacity-90"
+                style={{ background: "#0B2349" }}
+              >
+                Update Password
+              </button>
+            </ModalFooter>
+          </>
+        )}
+      </Modal>
     </>
   );
 }

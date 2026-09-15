@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import Sidebar from "@/components/Sidebar";
-import Header from "@/components/Header";
+import AppShell from "@/components/AppShell";
 
 export const metadata: Metadata = {
   title: "S.K. Boafo & Company | Practice Dashboard",
-  description: "Legal practice management dashboard for S.K. Boafo & Company — Gye Nyame Chambers",
+  description:
+    "Legal practice management dashboard for S.K. Boafo & Company — Gye Nyame Chambers",
   icons: {
     icon: "https://a.favicon.im/www.skboafoandcompany.org",
   },
@@ -18,16 +18,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body style={{ background: "#F5F7FA", margin: 0 }}>
-        <div style={{ display: "flex", height: "100vh", overflow: "hidden" }}>
-          <Sidebar />
-          <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden", minWidth: 0 }}>
-            <Header />
-            <main style={{ flex: 1, overflowY: "auto", padding: "24px" }}>
-              {children}
-            </main>
-          </div>
-        </div>
+      <body style={{ margin: 0 }}>
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );
