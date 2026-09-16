@@ -1,7 +1,7 @@
 export type IconName =
   | "grid" | "briefcase" | "users" | "calendar" | "receipt"
   | "file-text" | "team" | "bell" | "settings" | "search"
-  | "chevron-down" | "chevron-right" | "arrow-up" | "arrow-down"
+  | "chevron-down" | "chevron-right" | "chevron-left" | "arrow-up" | "arrow-down"
   | "menu" | "x" | "plus" | "filter" | "download" | "upload"
   | "check" | "clock" | "alert" | "scale" | "building" | "star"
   | "shield" | "eye" | "edit" | "trash" | "log-out" | "user"
@@ -31,6 +31,7 @@ export function Icon({ name, className = "w-5 h-5", strokeWidth = 1.75, style }:
     search: <><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></>,
     "chevron-down": <polyline points="6 9 12 15 18 9"/>,
     "chevron-right": <polyline points="9 18 15 12 9 6"/>,
+    "chevron-left": <polyline points="15 18 9 12 15 6"/>,
     "arrow-up": <><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></>,
     "arrow-down": <><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></>,
     menu: <><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></>,

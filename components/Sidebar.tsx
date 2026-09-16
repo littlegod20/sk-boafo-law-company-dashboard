@@ -125,7 +125,7 @@ export default function Sidebar() {
     <>
       <aside
         className={`flex flex-col flex-shrink-0 overflow-hidden transition-all duration-200 ${
-          collapsed ? "w-[72px]" : "w-64"
+          collapsed ? "w-[60px]" : "w-64"
         }`}
         style={{ background: "#0B2349" }}
       >
@@ -145,7 +145,7 @@ export default function Sidebar() {
                 style={{ color: "rgba(255,255,255,0.6)" }}
                 aria-label="Expand sidebar"
               >
-                <Icon name="menu" className="w-5 h-5" />
+                <Icon name="chevron-right" className="w-5 h-5" />
               </button>
             </div>
           ) : (
@@ -171,7 +171,7 @@ export default function Sidebar() {
                 style={{ color: "rgba(255,255,255,0.5)" }}
                 aria-label="Collapse sidebar"
               >
-                <Icon name="x" className="w-4 h-4" strokeWidth={2} />
+                <Icon name="chevron-left" className="w-4 h-4" strokeWidth={2} />
               </button>
             </div>
           )}
@@ -349,17 +349,17 @@ export default function Sidebar() {
               </div>
 
               {[
-                { icon: "user" as const,     label: "My Profile" },
-                { icon: "settings" as const, label: "Account Settings" },
-                { icon: "shield" as const,   label: "Change Password" },
+                { icon: "user" as const,     label: "My Profile",        color: "#93C5FD" },
+                { icon: "settings" as const, label: "Account Settings",  color: "#86EFAC" },
+                { icon: "shield" as const,   label: "Change Password",   color: "#FCD34D" },
               ].map((item) => (
                 <button
                   key={item.label}
                   className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-white/10 transition-colors text-left"
                   onClick={() => handleMenuAction(item.label)}
                 >
-                  <Icon name={item.icon} className="w-4 h-4" style={{ color: "rgba(255,255,255,0.45)" }} />
-                  <span className="text-[13px]" style={{ color: "rgba(255,255,255,0.8)" }}>
+                  <Icon name={item.icon} className="w-4 h-4" style={{ color: item.color }} />
+                  <span className="text-[13px] text-white">
                     {item.label}
                   </span>
                 </button>

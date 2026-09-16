@@ -91,30 +91,37 @@ export default function Header() {
         style={{ zIndex: 10, position: "relative" }}
       >
         <div className="flex-1 min-w-0">
-          <h1 className="text-[15px] font-semibold text-[#0B2349] truncate">{title}</h1>
+          <h1 className="text-[15px] truncate">
+            <span style={{ color: "#94A3B8" }}>S.K. Boafo</span>
+            {" "}
+            <span style={{ color: "#94A3B8" }}>/</span>
+            {" "}
+            <span className="font-semibold" style={{ color: "#0B2349" }}>{title}</span>
+          </h1>
           <p className="text-[11px] text-[#94A3B8]">{today}</p>
         </div>
 
         {/* Search */}
-        <div className="hidden md:flex items-center gap-2 rounded-lg px-3 py-2 bg-[#F5F7FA] border border-[#E2E8F0] w-56">
-          <Icon name="search" className="w-3.5 h-3.5 text-[#94A3B8]" strokeWidth={2} />
+        <div className="hidden md:flex items-center gap-2 rounded-lg px-3 py-2 bg-[#F5F7FA] border border-[#E2E8F0] min-w-0 w-64 flex-shrink-0">
+          <Icon name="search" className="w-3.5 h-3.5 text-[#94A3B8] flex-shrink-0" strokeWidth={2} />
           <input
             type="text"
             placeholder="Search cases, clients..."
-            className="flex-1 bg-transparent text-[13px] text-[#1e293b] placeholder-[#94A3B8] outline-none"
+            className="min-w-0 flex-1 bg-transparent text-[13px] text-[#1e293b] placeholder-[#94A3B8] outline-none"
           />
+          <kbd className="text-[10px] text-[#94A3B8] bg-[#EAECF0] px-1.5 py-0.5 rounded font-mono flex-shrink-0 leading-none">⌘K</kbd>
         </div>
 
         {/* Notification bell */}
         <button
-          className="relative p-2 rounded-lg hover:bg-[#F5F7FA] transition-colors"
+          className="relative p-2 rounded-lg hover:bg-[#F5F7FA] transition-colors flex-shrink-0"
           onClick={() => setNotifOpen(true)}
           aria-label="Notifications"
         >
-          <Icon name="bell" className="w-[18px] h-[18px] text-[#64748B]" />
+          <Icon name="bell" className="w-5 h-5 text-[#64748B]" />
           {unreadCount > 0 && (
             <span
-              className="absolute top-1 right-1 min-w-[16px] h-4 rounded-full flex items-center justify-center text-[9px] font-bold text-white px-0.5"
+              className="absolute -top-0.5 -right-0.5 min-w-[17px] h-[17px] rounded-full flex items-center justify-center text-[9px] font-bold text-white leading-none"
               style={{ background: "#DC2626" }}
             >
               {unreadCount}

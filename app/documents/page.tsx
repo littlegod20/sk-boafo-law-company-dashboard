@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Icon } from "@/components/Icons";
-import { Modal, FormField, ModalFooter, inputCls } from "@/components/Modal";
+import { Modal, ConfirmDialog, FormField, ModalFooter, inputCls } from "@/components/Modal";
+import { Pagination, BulkToolbar, TBtn, Checkbox } from "@/components/TableControls";
 
-const DOCUMENTS = [
+const INITIAL_DOCUMENTS = [
   { id: "DOC-2026-089", name: "Amended Settlement Agreement.pdf", type: "Settlement Agreement", case: "SKB-2026-047", client: "Ofori & Sons Ltd.", uploadedBy: "A. Mensah", date: "14 Sep 2026", size: "248 KB", status: "Pending Approval" },
   { id: "DOC-2026-088", name: "Retainer Agreement — TeleFlex.pdf", type: "Retainer Agreement", case: "SKB-2026-041", client: "TeleFlex Ghana", uploadedBy: "E. Darko", date: "12 Sep 2026", size: "182 KB", status: "Pending Approval" },
   { id: "DOC-2026-087", name: "Writ of Summons — Boateng v Estate.pdf", type: "Court Filing", case: "SKB-2026-046", client: "Adwoa Boateng", uploadedBy: "K. Asante", date: "11 Sep 2026", size: "94 KB", status: "Approved" },
@@ -16,6 +17,8 @@ const DOCUMENTS = [
   { id: "DOC-2026-081", name: "Will & Testament — YAT.pdf", type: "Will", case: "SKB-2026-042", client: "Yaa Asantewaa Trust", uploadedBy: "K. Asante", date: "18 Aug 2026", size: "89 KB", status: "Approved" },
   { id: "DOC-2026-080", name: "NCA Licence Application.pdf", type: "Application", case: "SKB-2026-037", client: "Adom Broadcasting", uploadedBy: "A. Mensah", date: "10 Aug 2026", size: "520 KB", status: "Approved" },
 ];
+
+const PAGE_SIZE = 6;
 
 const TYPE_ICON_MAP: Record<string, { icon: string; color: string; bg: string }> = {
   "Settlement Agreement": { icon: "scale", color: "#0B2349", bg: "#EFF4FF" },
@@ -37,21 +40,105 @@ const STATUS_STYLES: Record<string, { bg: string; text: string }> = {
 const STATUS_FILTERS = ["All", "Pending Approval", "Approved", "Rejected"];
 
 export default function DocumentsPage() {
+  const [documents, setDocuments] = useState(INITIAL_DOCUMENTS);
   const [statusFilter, setStatusFilter] = useState("All");
+  const [page, setPage] = useState(1);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showUpload, setShowUpload] = useState(false);
   const [uploaded, setUploaded] = useState(false);
   const [form, setForm] = useState({ name: "", caseId: "", docType: "", attorney: "" });
 
-  const filtered = DOCUMENTS.filter((d) =>
+  // Bulk action confirm dialogs
+  const [confirmApprove, setConfirmApprove] = useState(false);
+  const [confirmReject, setConfirmReject] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  // Download feedback
+  const [downloadMsg, setDownloadMsg] = useState("");
+
+  // Reset page when filter changes
+  useEffect(() => {
+    setPage(1);
+    setSelected(new Set());
+  }, [statusFilter]);
+
+  const filtered = documents.filter((d) =>
     statusFilter === "All" ? true : d.status === statusFilter
   );
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const pageDocs = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  // Selection helpers
+  const pageIds = pageDocs.map((d) => d.id);
+  const allPageSelected = pageIds.length > 0 && pageIds.every((id) => selected.has(id));
+  const somePageSelected = pageIds.some((id) => selected.has(id));
+
+  function toggleSelectAll() {
+    if (allPageSelected) {
+      setSelected((prev) => {
+        const next = new Set(prev);
+        pageIds.forEach((id) => next.delete(id));
+        return next;
+      });
+    } else {
+      setSelected((prev) => {
+        const next = new Set(prev);
+        pageIds.forEach((id) => next.add(id));
+        return next;
+      });
+    }
+  }
+
+  function toggleRow(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  // Bulk actions
+  function handleBulkApprove() {
+    setDocuments((prev) =>
+      prev.map((d) => (selected.has(d.id) ? { ...d, status: "Approved" } : d))
+    );
+    setSelected(new Set());
+    setConfirmApprove(false);
+  }
+
+  function handleBulkReject() {
+    setDocuments((prev) =>
+      prev.map((d) => (selected.has(d.id) ? { ...d, status: "Rejected" } : d))
+    );
+    setSelected(new Set());
+    setConfirmReject(false);
+  }
+
+  function handleBulkDownload() {
+    const count = selected.size;
+    setSelected(new Set());
+    setDownloadMsg(`Downloading ${count} file${count !== 1 ? "s" : ""}…`);
+    setTimeout(() => setDownloadMsg(""), 3000);
+  }
+
+  function handleBulkDelete() {
+    setDocuments((prev) => prev.filter((d) => !selected.has(d.id)));
+    setSelected(new Set());
+    setConfirmDelete(false);
+    // If we deleted everything on the current page, go back one page
+    setPage((p) => Math.max(1, p));
+  }
+
+  const selCount = selected.size;
 
   return (
     <div className="space-y-5 max-w-[1400px]">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-bold text-[#0B2349]">Document Repository</h2>
-          <p className="text-sm text-[#94A3B8]">{DOCUMENTS.length} documents — all matters</p>
+          <p className="text-sm text-[#94A3B8]">{documents.length} documents — all matters</p>
         </div>
         <div className="flex gap-2">
           <button
@@ -72,8 +159,8 @@ export default function DocumentsPage() {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4">
         {[
-          { label: "Total Documents", value: "284", icon: "file-text" as const, color: "#0B2349", bg: "#EFF4FF" },
-          { label: "Pending Approval", value: "3", icon: "hourglass" as const, color: "#D97706", bg: "#FFFBEB" },
+          { label: "Total Documents", value: String(documents.length), icon: "file-text" as const, color: "#0B2349", bg: "#EFF4FF" },
+          { label: "Pending Approval", value: String(documents.filter((d) => d.status === "Pending Approval").length), icon: "hourglass" as const, color: "#D97706", bg: "#FFFBEB" },
           { label: "Approved This Month", value: "24", icon: "check-circle" as const, color: "#059669", bg: "#ECFDF5" },
         ].map((s) => (
           <div key={s.label} className="bg-white rounded-xl p-4 flex items-center gap-4" style={{ border: "1px solid #F1F5F9", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
@@ -106,12 +193,46 @@ export default function DocumentsPage() {
         ))}
       </div>
 
+      {/* Download feedback */}
+      {downloadMsg && (
+        <div className="flex items-center gap-2 rounded-lg px-4 py-2.5 text-[13px] font-medium text-[#059669]" style={{ background: "#ECFDF5", border: "1px solid #A7F3D0" }}>
+          <Icon name="download" className="w-4 h-4" />
+          {downloadMsg}
+        </div>
+      )}
+
+      {/* Bulk Toolbar */}
+      {selCount > 0 && (
+        <BulkToolbar count={selCount} onClearSelection={() => setSelected(new Set())}>
+          <TBtn variant="success" icon="check-circle" onClick={() => setConfirmApprove(true)}>
+            Approve
+          </TBtn>
+          <TBtn variant="danger" icon="x-circle" onClick={() => setConfirmReject(true)}>
+            Reject
+          </TBtn>
+          <TBtn variant="default" icon="download" onClick={handleBulkDownload}>
+            Download
+          </TBtn>
+          <TBtn variant="danger" icon="trash-2" onClick={() => setConfirmDelete(true)}>
+            Delete
+          </TBtn>
+        </BulkToolbar>
+      )}
+
       {/* Documents Table */}
       <div className="bg-white rounded-xl overflow-hidden" style={{ border: "1px solid #F1F5F9", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
         <div className="overflow-x-auto">
           <table className="w-full text-[12px]">
             <thead>
               <tr style={{ background: "#FAFBFC" }}>
+                <th className="px-4 py-3.5 w-10">
+                  <Checkbox
+                    checked={allPageSelected}
+                    indeterminate={!allPageSelected && somePageSelected}
+                    onChange={toggleSelectAll}
+                    aria-label="Select all on page"
+                  />
+                </th>
                 {["Document", "Type", "Case", "Client", "Uploaded By", "Date", "Size", "Status", ""].map((h) => (
                   <th key={h} className="text-left px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wide whitespace-nowrap" style={{ color: "#94A3B8" }}>
                     {h}
@@ -120,11 +241,23 @@ export default function DocumentsPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((doc) => {
+              {pageDocs.map((doc) => {
                 const t = TYPE_ICON_MAP[doc.type] ?? TYPE_ICON_MAP.Application;
                 const ss = STATUS_STYLES[doc.status] ?? STATUS_STYLES.Approved;
+                const isSelected = selected.has(doc.id);
                 return (
-                  <tr key={doc.id} className="border-t border-[#F8FAFC] hover:bg-[#FAFBFF] transition-colors cursor-pointer">
+                  <tr
+                    key={doc.id}
+                    className="border-t border-[#F8FAFC] hover:bg-[#FAFBFF] transition-colors cursor-pointer"
+                    style={isSelected ? { background: "#F0F4FF" } : undefined}
+                  >
+                    <td className="px-4 py-3.5 w-10" onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={isSelected}
+                        onChange={() => toggleRow(doc.id)}
+                        aria-label={`Select ${doc.name}`}
+                      />
+                    </td>
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-2.5">
                         <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: t.bg }}>
@@ -156,9 +289,28 @@ export default function DocumentsPage() {
                   </tr>
                 );
               })}
+              {pageDocs.length === 0 && (
+                <tr>
+                  <td colSpan={10} className="px-5 py-10 text-center text-[13px] text-[#94A3B8]">
+                    No documents match this filter.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
+
+        {/* Table Footer — Pagination */}
+        {filtered.length > PAGE_SIZE && (
+          <div className="border-t border-[#F1F5F9] px-5 py-3">
+            <Pagination
+              page={page}
+              total={filtered.length}
+              pageSize={PAGE_SIZE}
+              onChange={setPage}
+            />
+          </div>
+        )}
       </div>
 
       {/* Upload Document Modal */}
@@ -213,6 +365,39 @@ export default function DocumentsPage() {
           </div>
         )}
       </Modal>
+
+      {/* Confirm: Approve */}
+      <ConfirmDialog
+        isOpen={confirmApprove}
+        onClose={() => setConfirmApprove(false)}
+        onConfirm={handleBulkApprove}
+        title="Approve Documents"
+        message={`Approve ${selCount} selected document${selCount !== 1 ? "s" : ""}? Their status will be updated to Approved.`}
+        confirmLabel="Approve"
+        variant="success"
+      />
+
+      {/* Confirm: Reject */}
+      <ConfirmDialog
+        isOpen={confirmReject}
+        onClose={() => setConfirmReject(false)}
+        onConfirm={handleBulkReject}
+        title="Reject Documents"
+        message={`Reject ${selCount} selected document${selCount !== 1 ? "s" : ""}? Their status will be updated to Rejected.`}
+        confirmLabel="Reject"
+        variant="danger"
+      />
+
+      {/* Confirm: Delete */}
+      <ConfirmDialog
+        isOpen={confirmDelete}
+        onClose={() => setConfirmDelete(false)}
+        onConfirm={handleBulkDelete}
+        title="Delete Documents"
+        message={`Permanently delete ${selCount} selected document${selCount !== 1 ? "s" : ""}? This action cannot be undone.`}
+        confirmLabel="Delete"
+        variant="danger"
+      />
     </div>
   );
 }

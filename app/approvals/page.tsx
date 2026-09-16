@@ -3,6 +3,9 @@
 import { useState } from "react";
 import { Icon } from "@/components/Icons";
 import { ConfirmDialog, Modal } from "@/components/Modal";
+import { Pagination, BulkToolbar, TBtn, Checkbox } from "@/components/TableControls";
+
+const PAGE_SIZE = 5;
 
 const INITIAL_APPROVALS = [
   { id: "APR-2026-031", type: "Document Approval", title: "Amended Settlement Agreement — SKB-2026-047", submittedBy: "A. Mensah", date: "14 Sep 2026", case: "SKB-2026-047", client: "Ofori & Sons Ltd.", priority: "Urgent", status: "Pending" },
@@ -40,21 +43,92 @@ const STATUS_STYLES: Record<string, { bg: string; text: string }> = {
 
 export default function ApprovalsPage() {
   const [approvals, setApprovals] = useState(INITIAL_APPROVALS);
-  const [selected, setSelected] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<string | null>(null);
   const [confirmApprove, setConfirmApprove] = useState<string | null>(null);
   const [confirmReject, setConfirmReject] = useState<string | null>(null);
   const [viewDoc, setViewDoc] = useState<string | null>(null);
+
+  // Pagination
+  const [page, setPage] = useState(1);
+
+  // Row selection
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  // Bulk confirm dialogs
+  const [confirmBulkApprove, setConfirmBulkApprove] = useState(false);
+  const [confirmBulkReject, setConfirmBulkReject] = useState(false);
 
   const pending = approvals.filter((a) => a.status === "Pending");
   const approvedToday = approvals.filter((a) => a.status === "Approved").length;
   const rejected = approvals.filter((a) => a.status === "Rejected").length;
 
+  // Paged slice from full approvals array
+  const paged = approvals.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const pagedIds = paged.map((a) => a.id);
+
+  // Select-all state for current page
+  const allPageSelected = pagedIds.length > 0 && pagedIds.every((id) => selected.has(id));
+  const somePageSelected = pagedIds.some((id) => selected.has(id));
+
   const setStatus = (id: string, status: ApprovalStatus) => {
     setApprovals((prev) => prev.map((a) => (a.id === id ? { ...a, status } : a)));
-    setSelected(null);
+    setExpanded(null);
+  };
+
+  const handleSelectAll = () => {
+    if (allPageSelected) {
+      // Deselect all on page
+      setSelected((prev) => {
+        const next = new Set(prev);
+        pagedIds.forEach((id) => next.delete(id));
+        return next;
+      });
+    } else {
+      // Select all on page
+      setSelected((prev) => {
+        const next = new Set(prev);
+        pagedIds.forEach((id) => next.add(id));
+        return next;
+      });
+    }
+  };
+
+  const handleToggleRow = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const handleBulkApprove = () => {
+    setApprovals((prev) =>
+      prev.map((a) =>
+        selected.has(a.id) && a.status === "Pending" ? { ...a, status: "Approved" } : a
+      )
+    );
+    setSelected(new Set());
+    setConfirmBulkApprove(false);
+  };
+
+  const handleBulkReject = () => {
+    setApprovals((prev) =>
+      prev.map((a) =>
+        selected.has(a.id) && a.status === "Pending" ? { ...a, status: "Rejected" } : a
+      )
+    );
+    setSelected(new Set());
+    setConfirmBulkReject(false);
   };
 
   const viewItem = approvals.find((a) => a.id === viewDoc);
+
+  const selectedCount = selected.size;
 
   return (
     <div className="space-y-5 max-w-[1400px]">
@@ -68,9 +142,9 @@ export default function ApprovalsPage() {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4">
         {[
-          { label: "Pending",       count: pending.length, color: "#D97706", bg: "#FFFBEB", icon: "hourglass"   as const },
-          { label: "Approved Today",count: approvedToday,  color: "#059669", bg: "#ECFDF5", icon: "check-circle" as const },
-          { label: "Rejected",      count: rejected,        color: "#DC2626", bg: "#FFF5F5", icon: "xmark-circle" as const },
+          { label: "Pending",        count: pending.length, color: "#D97706", bg: "#FFFBEB", icon: "hourglass"    as const },
+          { label: "Approved Today", count: approvedToday,  color: "#059669", bg: "#ECFDF5", icon: "check-circle" as const },
+          { label: "Rejected",       count: rejected,       color: "#DC2626", bg: "#FFF5F5", icon: "xmark-circle" as const },
         ].map((s) => (
           <div key={s.label} className="bg-white rounded-xl p-4 flex items-center gap-4" style={{ border: "1px solid #F1F5F9", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
             <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: s.bg }}>
@@ -84,32 +158,76 @@ export default function ApprovalsPage() {
         ))}
       </div>
 
+      {/* Bulk toolbar — visible when any items are selected */}
+      {selectedCount > 0 && (
+        <BulkToolbar count={selectedCount} onClear={() => setSelected(new Set())}>
+          <TBtn variant="success" onClick={() => setConfirmBulkApprove(true)}>
+            <Icon name="check" className="w-3.5 h-3.5" strokeWidth={2.5} />
+            Approve All
+          </TBtn>
+          <TBtn variant="danger" onClick={() => setConfirmBulkReject(true)}>
+            <Icon name="x" className="w-3.5 h-3.5" strokeWidth={2.5} />
+            Reject All
+          </TBtn>
+        </BulkToolbar>
+      )}
+
+      {/* Select-all bar */}
+      <div
+        className="flex items-center gap-3 px-4 py-2.5 rounded-lg"
+        style={{ background: "#F8FAFC", border: "1px solid #F1F5F9" }}
+      >
+        <Checkbox
+          checked={allPageSelected}
+          indeterminate={!allPageSelected && somePageSelected}
+          onChange={handleSelectAll}
+        />
+        <span className="text-[12px] text-[#94A3B8] select-none">Select all on this page</span>
+      </div>
+
       {/* Approval List */}
       <div className="space-y-3">
-        {approvals.map((item) => {
+        {paged.map((item) => {
           const ps = PRIORITY_STYLES[item.priority] ?? PRIORITY_STYLES.Low;
           const ss = STATUS_STYLES[item.status] ?? STATUS_STYLES.Pending;
           const iconName = TYPE_ICONS[item.type] ?? "file-text";
-          const isSelected = selected === item.id;
+          const isExpanded = expanded === item.id;
+          const isChecked = selected.has(item.id);
 
           return (
             <div
               key={item.id}
               className="bg-white rounded-xl overflow-hidden transition-all"
               style={{
-                border: `1px solid ${isSelected ? "#0B2349" : "#F1F5F9"}`,
-                boxShadow: isSelected ? "0 4px 16px rgba(11,35,73,0.12)" : "0 1px 4px rgba(0,0,0,0.04)",
+                border: `1px solid ${isExpanded ? "#0B2349" : "#F1F5F9"}`,
+                boxShadow: isExpanded ? "0 4px 16px rgba(11,35,73,0.12)" : "0 1px 4px rgba(0,0,0,0.04)",
               }}
             >
               <div
-                className="flex items-start gap-4 p-4 cursor-pointer"
-                onClick={() => setSelected(isSelected ? null : item.id)}
+                className="flex items-start gap-3 p-4 cursor-pointer"
+                onClick={() => setExpanded(isExpanded ? null : item.id)}
               >
+                {/* Row checkbox — stopPropagation so it doesn't expand/collapse */}
+                <div className="flex items-center mt-1 flex-shrink-0" onClick={(e) => handleToggleRow(e, item.id)}>
+                  <Checkbox
+                    checked={isChecked}
+                    onChange={() => {
+                      setSelected((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(item.id)) next.delete(item.id);
+                        else next.add(item.id);
+                        return next;
+                      });
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </div>
+
                 <div
                   className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
                   style={{
                     background:
-                      item.status === "Pending" ? "#EFF4FF"
+                      item.status === "Pending"  ? "#EFF4FF"
                       : item.status === "Approved" ? "#ECFDF5"
                       : "#FFF5F5",
                   }}
@@ -119,7 +237,7 @@ export default function ApprovalsPage() {
                     className="w-5 h-5"
                     style={{
                       color:
-                        item.status === "Pending" ? "#0B2349"
+                        item.status === "Pending"  ? "#0B2349"
                         : item.status === "Approved" ? "#059669"
                         : "#DC2626",
                     } as React.CSSProperties}
@@ -148,12 +266,12 @@ export default function ApprovalsPage() {
 
                 <Icon
                   name="chevron-down"
-                  className={`w-4 h-4 text-[#94A3B8] flex-shrink-0 mt-1 transition-transform ${isSelected ? "rotate-180" : ""}`}
+                  className={`w-4 h-4 text-[#94A3B8] flex-shrink-0 mt-1 transition-transform ${isExpanded ? "rotate-180" : ""}`}
                 />
               </div>
 
               {/* Expanded detail */}
-              {isSelected && (
+              {isExpanded && (
                 <div className="border-t border-[#F1F5F9] px-4 py-4" style={{ background: "#FAFBFC" }}>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-[12px] mb-4">
                     <div><p className="text-[#94A3B8] mb-1">Client</p><p className="font-medium text-[#1e293b]">{item.client}</p></div>
@@ -196,7 +314,23 @@ export default function ApprovalsPage() {
         })}
       </div>
 
-      {/* Approve confirm */}
+      {/* Pagination */}
+      <div
+        className="bg-white rounded-xl overflow-hidden"
+        style={{ border: "1px solid #F1F5F9", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}
+      >
+        <Pagination
+          page={page}
+          total={approvals.length}
+          pageSize={PAGE_SIZE}
+          onChange={(p) => {
+            setPage(p);
+            setExpanded(null);
+          }}
+        />
+      </div>
+
+      {/* Per-item Approve confirm */}
       <ConfirmDialog
         isOpen={!!confirmApprove}
         onClose={() => setConfirmApprove(null)}
@@ -207,7 +341,7 @@ export default function ApprovalsPage() {
         variant="success"
       />
 
-      {/* Reject confirm */}
+      {/* Per-item Reject confirm */}
       <ConfirmDialog
         isOpen={!!confirmReject}
         onClose={() => setConfirmReject(null)}
@@ -215,6 +349,28 @@ export default function ApprovalsPage() {
         title="Reject this item?"
         message="This will mark the item as Rejected. The submitting attorney will be notified to revise and resubmit."
         confirmLabel="Reject"
+        variant="danger"
+      />
+
+      {/* Bulk Approve confirm */}
+      <ConfirmDialog
+        isOpen={confirmBulkApprove}
+        onClose={() => setConfirmBulkApprove(false)}
+        onConfirm={handleBulkApprove}
+        title={`Approve ${selectedCount} item${selectedCount !== 1 ? "s" : ""}?`}
+        message="All selected pending items will be marked as Approved. Submitting attorneys will be notified."
+        confirmLabel="Approve All"
+        variant="success"
+      />
+
+      {/* Bulk Reject confirm */}
+      <ConfirmDialog
+        isOpen={confirmBulkReject}
+        onClose={() => setConfirmBulkReject(false)}
+        onConfirm={handleBulkReject}
+        title={`Reject ${selectedCount} item${selectedCount !== 1 ? "s" : ""}?`}
+        message="All selected pending items will be marked as Rejected. Submitting attorneys will be notified to revise and resubmit."
+        confirmLabel="Reject All"
         variant="danger"
       />
 
