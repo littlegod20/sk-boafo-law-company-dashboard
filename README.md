@@ -1,36 +1,69 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# S.K. Boafo & Company — Practice Dashboard
 
-## Getting Started
+Legal practice management dashboard for **S.K. Boafo & Company** (Gye Nyame Chambers). Staff can review caseload, clients, court dates, approvals, billing, documents, and team activity from one workspace.
 
-First, run the development server:
+This is a front-end prototype. Data and sign-in are local demo content stored in the browser — there is no backend yet.
+
+## Features
+
+| Section | Route | What it covers |
+| --- | --- | --- |
+| Dashboard | `/` | Caseload KPIs, recent matters, deadlines, practice-area mix, and attorney summary |
+| Case Management | `/cases` | Matter list, status, and opening a new case |
+| Clients | `/clients` | Client records |
+| Court Calendar | `/calendar` | Hearings and filing dates |
+| Approvals | `/approvals` | Approval queue with preview, approve, and reject |
+| Billing & Invoices | `/billing` | Invoices and outstanding balances (GHS) |
+| Documents | `/documents` | Document repository |
+| Staff & Team | `/staff` | Attorneys and team members |
+| Announcements | `/announcements` | Firm notices |
+| Settings | `/settings` | Firm information and preferences |
+
+The sidebar also supports a role switcher (Managing Partner, Partner, Associate, Paralegal, Admin) and a collapsible profile menu with sign-out.
+
+## Tech stack
+
+- [Next.js](https://nextjs.org) 16 (App Router)
+- React 19
+- TypeScript
+- Tailwind CSS 4
+
+## Getting started
+
+Requires Node.js and [pnpm](https://pnpm.io) (this repo pins `pnpm@10.33.0`).
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000). Unauthenticated visits are expected to start at `/login`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Other scripts:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+pnpm build   # production build
+pnpm start   # serve the production build
+pnpm lint    # ESLint
+```
 
-## Learn More
+## Demo sign-in
 
-To learn more about Next.js, take a look at the following resources:
+Credentials are hardcoded for local preview. Click a row on the login screen to autofill, or use:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Name | Role | Email | Password |
+| --- | --- | --- | --- |
+| S.K. Boafo | Managing Partner | `sk.boafo@skboafo.gh` | `Chambers2026` |
+| Abena Mensah | Partner | `a.mensah@skboafo.gh` | `Chambers2026` |
+| Yaa Bonsu | Admin | `admin@skboafo.gh` | `Admin2026` |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Sign-in writes `sk_boafo_auth` and `sk_boafo_user` to `localStorage`. Signing out clears them.
 
-## Deploy on Vercel
+## Project layout
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```
+app/            # routes (dashboard, cases, clients, calendar, …)
+components/     # AppShell, Sidebar, Header, Modal, Icons
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Firm colours used in the UI are navy `#0B2349` and gold `#C9A227`.
