@@ -6,34 +6,144 @@ import { useState, useRef, useEffect } from "react";
 import { Icon } from "./Icons";
 import { ConfirmDialog, Modal, FormField, ModalFooter, inputCls } from "./Modal";
 
-const NAV_ITEMS = [
-  { href: "/", label: "Dashboard", icon: "grid" as const },
-  { href: "/cases", label: "Case Management", icon: "briefcase" as const },
-  { href: "/clients", label: "Clients", icon: "users" as const },
-  { href: "/calendar", label: "Court Calendar", icon: "calendar" as const },
-  { href: "/approvals", label: "Approvals", icon: "check-circle" as const, badge: 5 },
-  { href: "/billing", label: "Billing & Invoices", icon: "receipt" as const },
-  { href: "/documents", label: "Documents", icon: "file-text" as const },
-  { href: "/staff", label: "Staff & Team", icon: "team" as const },
+// ── Shared personal nav (all non-HR roles) ───────────────────────────────────
+const PERSONAL_NAV = [
+  { href: "/leave",            label: "My leave",        icon: "umbrella" as const },
+  { href: "/my-performance",   label: "My performance",  icon: "trending-up" as const },
+  { href: "/attendance",       label: "My attendance",   icon: "clock" as const },
+  { href: "/files",            label: "My files",        icon: "folder" as const },
+  { href: "/messages",         label: "Messages",        icon: "message-square" as const },
+  { href: "/announcements",    label: "Announcements",   icon: "bell" as const, badge: 2 },
+  { href: "/training",         label: "Training",        icon: "book-open" as const },
 ];
 
-const BOTTOM_ITEMS = [
-  { href: "/announcements", label: "Announcements", icon: "bell" as const, badge: 2 },
-  { href: "/settings", label: "Settings", icon: "settings" as const },
+const APPROVALS_ITEM = { href: "/approvals", label: "Approvals", icon: "check-circle" as const, badge: 5 };
+
+// Roles that have approval authority
+const APPROVER_ROLES = new Set(["managing_partner", "partner", "admin"]);
+
+// ── Per-role work nav ─────────────────────────────────────────────────────────
+type NavItem = { href: string; label: string; icon: import("./Icons").IconName; badge?: number };
+
+const WORK_NAV: Record<string, NavItem[]> = {
+  managing_partner: [
+    { href: "/",          label: "Dashboard",       icon: "grid" },
+    { href: "/cases",     label: "Case Management", icon: "briefcase" },
+    { href: "/clients",   label: "Clients",         icon: "users" },
+    { href: "/calendar",  label: "Court Calendar",  icon: "calendar" },
+    { href: "/billing",   label: "Billing & Invoices", icon: "receipt" },
+    { href: "/documents", label: "Documents",       icon: "file-text" },
+    { href: "/staff",     label: "Staff & Team",    icon: "team" },
+  ],
+  partner: [
+    { href: "/",          label: "Dashboard",       icon: "grid" },
+    { href: "/cases",     label: "Case Management", icon: "briefcase" },
+    { href: "/clients",   label: "Clients",         icon: "users" },
+    { href: "/calendar",  label: "Court Calendar",  icon: "calendar" },
+    { href: "/billing",   label: "Billing & Invoices", icon: "receipt" },
+    { href: "/documents", label: "Documents",       icon: "file-text" },
+  ],
+  associate: [
+    { href: "/",          label: "Dashboard",       icon: "grid" },
+    { href: "/cases",     label: "Case Management", icon: "briefcase" },
+    { href: "/clients",   label: "Clients",         icon: "users" },
+    { href: "/calendar",  label: "Court Calendar",  icon: "calendar" },
+    { href: "/documents", label: "Documents",       icon: "file-text" },
+  ],
+  paralegal: [
+    { href: "/",          label: "Dashboard",       icon: "grid" },
+    { href: "/cases",     label: "Case Management", icon: "briefcase" },
+    { href: "/calendar",  label: "Court Calendar",  icon: "calendar" },
+    { href: "/documents", label: "Documents",       icon: "file-text" },
+  ],
+  admin: [
+    { href: "/",          label: "Dashboard",       icon: "grid" },
+    { href: "/clients",   label: "Clients",         icon: "users" },
+    { href: "/billing",   label: "Billing & Invoices", icon: "receipt" },
+    { href: "/documents", label: "Documents",       icon: "file-text" },
+    { href: "/staff",     label: "Staff & Team",    icon: "team" },
+  ],
+};
+
+// ── HR role nav (OMNI-style) ──────────────────────────────────────────────────
+const HR_NAV_MAIN = [
+  { href: "/",                 label: "Dashboard",        icon: "grid" as const },
+  { href: "/leave",            label: "My leave",         icon: "umbrella" as const },
+  { href: "/my-performance",   label: "My performance",   icon: "trending-up" as const },
+  { href: "/team-performance", label: "Team performance", icon: "team" as const },
+  { href: "/attendance",       label: "My attendance",    icon: "clock" as const },
+  { href: "/files",            label: "My files",         icon: "folder" as const },
+  { href: "/messages",         label: "Messages",         icon: "message-square" as const },
+  { href: "/approvals",        label: "Approvals",        icon: "check-circle" as const, badge: 5 },
+  { href: "/announcements",    label: "Announcements",    icon: "bell" as const, badge: 2 },
+  { href: "/training",         label: "Training",         icon: "book-open" as const },
+];
+
+const HR_PROJECTS = [
+  { href: "/projects",  label: "All projects", icon: "layers" as const },
+  { href: "/insights",  label: "Insights",     icon: "bar-chart" as const },
+];
+
+const HR_SECTION = [
+  { href: "/hr/leave",      label: "Leave register", icon: "calendar" as const },
+  { href: "/hr/employees",  label: "Employees",      icon: "users" as const },
+  { href: "/hr/attendance", label: "Attendance",     icon: "clock" as const },
 ];
 
 const ROLES = [
   { id: "managing_partner", label: "Managing Partner", color: "#C9A227" },
-  { id: "partner", label: "Partner", color: "#2260b8" },
-  { id: "associate", label: "Associate", color: "#059669" },
-  { id: "paralegal", label: "Paralegal", color: "#D97706" },
-  { id: "admin", label: "Admin", color: "#7C3AED" },
+  { id: "partner",          label: "Partner",          color: "#2260b8" },
+  { id: "associate",        label: "Associate",        color: "#059669" },
+  { id: "paralegal",        label: "Paralegal",        color: "#D97706" },
+  { id: "admin",            label: "Admin",            color: "#7C3AED" },
+  { id: "hr_officer",       label: "HR Officer",       color: "#0891b2" },
 ];
 
 interface StoredUser {
   name: string;
   role: string;
   email: string;
+}
+
+// Shared nav link renderer used by both role nav sets
+function NavLink({
+  item,
+  pathname,
+  collapsed,
+  indent = false,
+}: {
+  item: { href: string; label: string; icon: import("./Icons").IconName; badge?: number };
+  pathname: string;
+  collapsed: boolean;
+  indent?: boolean;
+}) {
+  const active = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
+  return (
+    <Link
+      href={item.href}
+      title={collapsed ? item.label : undefined}
+      className={`flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors relative ${
+        active ? "text-white font-medium" : "text-white/60 hover:text-white hover:bg-white/8"
+      } ${collapsed ? "justify-center" : ""}`}
+      style={active ? { background: "rgba(201,162,39,0.18)", color: "#fff" } : {}}
+    >
+      {active && (
+        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r" style={{ background: "#C9A227" }} />
+      )}
+      {indent && !collapsed && <span className="w-3 flex-shrink-0" />}
+      <Icon name={item.icon} className="w-[18px] h-[18px] flex-shrink-0" strokeWidth={active ? 2 : 1.75} />
+      {!collapsed && (
+        <>
+          <span className="text-[13px] leading-tight flex-1">{item.label}</span>
+          {item.badge != null && (
+            <span className="text-[10px] font-bold rounded-full px-1.5 py-0.5 leading-none" style={{ background: "#C9A227", color: "#0B2349" }}>
+              {item.badge}
+            </span>
+          )}
+        </>
+      )}
+    </Link>
+  );
 }
 
 function initials(name: string) {
@@ -49,11 +159,13 @@ export default function Sidebar() {
   const pathname  = usePathname();
   const router    = useRouter();
 
-  const [activeRole, setActiveRole]       = useState("managing_partner");
-  const [roleOpen, setRoleOpen]           = useState(false);
-  const [collapsed, setCollapsed]         = useState(false);
-  const [profileOpen, setProfileOpen]     = useState(false);
+  const [activeRole, setActiveRole]         = useState("managing_partner");
+  const [roleOpen, setRoleOpen]             = useState(false);
+  const [collapsed, setCollapsed]           = useState(false);
+  const [profileOpen, setProfileOpen]       = useState(false);
   const [confirmSignOut, setConfirmSignOut] = useState(false);
+  const [projectsOpen, setProjectsOpen]     = useState(true);
+  const [hrSectionOpen, setHrSectionOpen]   = useState(true);
 
   // Modals
   const [showProfile, setShowProfile]             = useState(false);
@@ -232,96 +344,76 @@ export default function Sidebar() {
         {/* Navigation                                                        */}
         {/* ---------------------------------------------------------------- */}
         <nav className="flex-1 px-3 py-2 overflow-y-auto space-y-0.5">
-          {!collapsed && (
-            <p
-              className="text-[10px] font-semibold uppercase tracking-widest px-3 pt-2 pb-1"
-              style={{ color: "rgba(255,255,255,0.35)" }}
-            >
-              Main
-            </p>
-          )}
-          {NAV_ITEMS.map((item) => {
-            const active =
-              pathname === item.href ||
-              (item.href !== "/" && pathname.startsWith(item.href));
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                title={collapsed ? item.label : undefined}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors relative ${
-                  active ? "text-white font-medium" : "text-white/60 hover:text-white hover:bg-white/8"
-                } ${collapsed ? "justify-center" : ""}`}
-                style={active ? { background: "rgba(201,162,39,0.18)", color: "#fff" } : {}}
-              >
-                {active && (
-                  <span
-                    className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r"
-                    style={{ background: "#C9A227" }}
-                  />
-                )}
-                <Icon
-                  name={item.icon}
-                  className="w-[18px] h-[18px] flex-shrink-0"
-                  strokeWidth={active ? 2 : 1.75}
-                />
-                {!collapsed && (
-                  <>
-                    <span className="text-[13px] leading-tight flex-1">{item.label}</span>
-                    {item.badge && (
-                      <span
-                        className="text-[10px] font-bold rounded-full px-1.5 py-0.5 leading-none"
-                        style={{ background: "#C9A227", color: "#0B2349" }}
-                      >
-                        {item.badge}
-                      </span>
-                    )}
-                  </>
-                )}
-              </Link>
-            );
-          })}
+          {activeRole === "hr_officer" ? (
+            /* ── HR role nav ── */
+            <>
+              {HR_NAV_MAIN.map((item) => <NavLink key={item.href} item={item} pathname={pathname} collapsed={collapsed} />)}
 
-          {!collapsed && (
-            <p
-              className="text-[10px] font-semibold uppercase tracking-widest px-3 pt-4 pb-1"
-              style={{ color: "rgba(255,255,255,0.35)" }}
-            >
-              General
-            </p>
-          )}
-          {BOTTOM_ITEMS.map((item) => {
-            const active = pathname === item.href;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                title={collapsed ? item.label : undefined}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors relative ${
-                  active ? "text-white font-medium" : "text-white/60 hover:text-white hover:bg-white/8"
-                } ${collapsed ? "justify-center" : ""}`}
-                style={active ? { background: "rgba(201,162,39,0.18)" } : {}}
-              >
-                {active && (
-                  <span
-                    className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r"
-                    style={{ background: "#C9A227" }}
+              {/* Projects group */}
+              {!collapsed && (
+                <button
+                  onClick={() => setProjectsOpen((o) => !o)}
+                  className="w-full flex items-center gap-3 rounded-lg px-3 py-2.5 mt-1 text-white/60 hover:text-white hover:bg-white/8 transition-colors"
+                >
+                  <Icon name="layers" className="w-[18px] h-[18px] flex-shrink-0" strokeWidth={1.75} />
+                  <span className="text-[13px] flex-1 text-left">Projects</span>
+                  <Icon
+                    name="chevron-down"
+                    className={`w-3.5 h-3.5 flex-shrink-0 transition-transform ${projectsOpen ? "rotate-180" : ""}`}
+                    strokeWidth={2.5}
+                    style={{ color: "rgba(255,255,255,0.4)" }}
                   />
-                )}
-                <Icon name={item.icon} className="w-[18px] h-[18px] flex-shrink-0" strokeWidth={1.75} />
-                {!collapsed && (
-                  <>
-                    <span className="text-[13px] flex-1">{item.label}</span>
-                    {item.badge && (
-                      <span className="text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center bg-red-500 text-white">
-                        {item.badge}
-                      </span>
-                    )}
-                  </>
-                )}
-              </Link>
-            );
-          })}
+                </button>
+              )}
+              {(collapsed || projectsOpen) && HR_PROJECTS.map((item) => (
+                <NavLink key={item.href} item={item} pathname={pathname} collapsed={collapsed} indent={!collapsed} />
+              ))}
+
+              {/* HR group */}
+              {!collapsed && (
+                <button
+                  onClick={() => setHrSectionOpen((o) => !o)}
+                  className="w-full flex items-center gap-3 rounded-lg px-3 py-2.5 mt-1 text-white/60 hover:text-white hover:bg-white/8 transition-colors"
+                >
+                  <Icon name="team" className="w-[18px] h-[18px] flex-shrink-0" strokeWidth={1.75} />
+                  <span className="text-[13px] flex-1 text-left">HR</span>
+                  <Icon
+                    name="chevron-down"
+                    className={`w-3.5 h-3.5 flex-shrink-0 transition-transform ${hrSectionOpen ? "rotate-180" : ""}`}
+                    strokeWidth={2.5}
+                    style={{ color: "rgba(255,255,255,0.4)" }}
+                  />
+                </button>
+              )}
+              {(collapsed || hrSectionOpen) && HR_SECTION.map((item) => (
+                <NavLink key={item.href} item={item} pathname={pathname} collapsed={collapsed} indent={!collapsed} />
+              ))}
+            </>
+          ) : (
+            /* ── Law-firm role nav (role-aware work + shared personal) ── */
+            <>
+              {!collapsed && (
+                <p className="text-[10px] font-semibold uppercase tracking-widest px-3 pt-2 pb-1" style={{ color: "rgba(255,255,255,0.35)" }}>
+                  Work
+                </p>
+              )}
+              {(WORK_NAV[activeRole] ?? WORK_NAV.associate).map((item) => (
+                <NavLink key={item.href} item={item} pathname={pathname} collapsed={collapsed} />
+              ))}
+              {APPROVER_ROLES.has(activeRole) && (
+                <NavLink item={APPROVALS_ITEM} pathname={pathname} collapsed={collapsed} />
+              )}
+
+              {!collapsed && (
+                <p className="text-[10px] font-semibold uppercase tracking-widest px-3 pt-4 pb-1" style={{ color: "rgba(255,255,255,0.35)" }}>
+                  Personal
+                </p>
+              )}
+              {PERSONAL_NAV.map((item) => (
+                <NavLink key={item.href} item={item} pathname={pathname} collapsed={collapsed} />
+              ))}
+            </>
+          )}
         </nav>
 
         {/* ---------------------------------------------------------------- */}

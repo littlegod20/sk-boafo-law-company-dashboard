@@ -5,16 +5,28 @@ import { useState, useEffect } from "react";
 import { Icon } from "./Icons";
 
 const PAGE_TITLES: Record<string, string> = {
-  "/":              "Dashboard Overview",
-  "/cases":         "Case Management",
-  "/clients":       "Clients",
-  "/calendar":      "Court Calendar",
-  "/approvals":     "Approvals",
-  "/billing":       "Billing & Invoices",
-  "/documents":     "Documents",
-  "/staff":         "Staff & Team",
-  "/announcements": "Announcements",
-  "/settings":      "Settings",
+  "/":                    "Dashboard Overview",
+  "/cases":               "Case Management",
+  "/clients":             "Clients",
+  "/calendar":            "Court Calendar",
+  "/approvals":           "Approvals",
+  "/billing":             "Billing & Invoices",
+  "/documents":           "Documents",
+  "/staff":               "Staff & Team",
+  "/announcements":       "Announcements",
+  "/settings":            "Settings",
+  "/leave":               "My Leave",
+  "/my-performance":      "My Performance",
+  "/team-performance":    "Team Performance",
+  "/attendance":          "My Attendance",
+  "/files":               "My Files",
+  "/messages":            "Messages",
+  "/training":            "Training",
+  "/projects":            "All Projects",
+  "/insights":            "Insights",
+  "/hr/leave":            "Leave Register",
+  "/hr/employees":        "Employees",
+  "/hr/attendance":       "Attendance",
 };
 
 type NotifType = "hearing" | "approval" | "invoice" | "case" | "staff";
