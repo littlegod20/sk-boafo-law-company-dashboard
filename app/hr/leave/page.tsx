@@ -167,7 +167,7 @@ export default function HRLeavePage() {
         <Pagination page={page} total={filtered.length} pageSize={PAGE_SIZE} onChange={(p) => { setPage(p); setSelected(new Set()); }} />
       </div>
 
-      <ConfirmDialog isOpen={confirmApprove} onClose={() => setConfirmApprove(false)} onConfirm={handleApprove} title="Approve leave?" message={`Approve leave for ${selected.size} request${selected.size !== 1 ? "s" : ""}?`} confirmLabel="Approve" variant="default" />
+      <ConfirmDialog isOpen={confirmApprove} onClose={() => setConfirmApprove(false)} onConfirm={handleApprove} title="Approve leave?" message={`Approve leave for ${selected.size} request${selected.size !== 1 ? "s" : ""}?`} confirmLabel="Approve" variant="success" />
       <ConfirmDialog isOpen={confirmDecline} onClose={() => setConfirmDecline(false)} onConfirm={handleDecline} title="Decline leave?" message={`Decline leave for ${selected.size} request${selected.size !== 1 ? "s" : ""}?`} confirmLabel="Decline" variant="danger" />
     </div>
   );

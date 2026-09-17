@@ -203,17 +203,21 @@ export default function DocumentsPage() {
 
       {/* Bulk Toolbar */}
       {selCount > 0 && (
-        <BulkToolbar count={selCount} onClearSelection={() => setSelected(new Set())}>
-          <TBtn variant="success" icon="check-circle" onClick={() => setConfirmApprove(true)}>
+        <BulkToolbar count={selCount} onClear={() => setSelected(new Set())}>
+          <TBtn variant="success" onClick={() => setConfirmApprove(true)}>
+            <Icon name="check-circle" className="w-3.5 h-3.5" />
             Approve
           </TBtn>
-          <TBtn variant="danger" icon="x-circle" onClick={() => setConfirmReject(true)}>
+          <TBtn variant="danger" onClick={() => setConfirmReject(true)}>
+            <Icon name="x" className="w-3.5 h-3.5" />
             Reject
           </TBtn>
-          <TBtn variant="default" icon="download" onClick={handleBulkDownload}>
+          <TBtn variant="default" onClick={handleBulkDownload}>
+            <Icon name="download" className="w-3.5 h-3.5" />
             Download
           </TBtn>
-          <TBtn variant="danger" icon="trash-2" onClick={() => setConfirmDelete(true)}>
+          <TBtn variant="danger" onClick={() => setConfirmDelete(true)}>
+            <Icon name="trash" className="w-3.5 h-3.5" />
             Delete
           </TBtn>
         </BulkToolbar>

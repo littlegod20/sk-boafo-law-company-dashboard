@@ -573,7 +573,7 @@ export default function CasesPage() {
         title="Delete Cases"
         message={`Are you sure you want to permanently delete ${selected.size} ${selected.size === 1 ? "case" : "cases"}? This action cannot be undone.`}
         confirmLabel="Delete"
-        danger
+        variant="danger"
       />
     </div>
   );

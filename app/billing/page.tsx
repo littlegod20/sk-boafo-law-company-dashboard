@@ -206,24 +206,26 @@ export default function BillingPage() {
           </div>
 
           {/* BulkToolbar — between header and table, shown when selection non-empty */}
-          <BulkToolbar visible={selected.size > 0}>
-            <TBtn variant="success" onClick={() => setConfirmMarkPaid(true)}>
-              <Icon name="check-circle" className="w-3.5 h-3.5" />
-              Mark Paid
-            </TBtn>
-            <TBtn variant="default" onClick={() => setConfirmReminder(true)}>
-              <Icon name="mail" className="w-3.5 h-3.5" />
-              Send Reminder
-            </TBtn>
-            <TBtn variant="default" onClick={doExport}>
-              <Icon name="download" className="w-3.5 h-3.5" />
-              Export
-            </TBtn>
-            <TBtn variant="danger" onClick={() => setConfirmVoid(true)}>
-              <Icon name="trash" className="w-3.5 h-3.5" />
-              Void
-            </TBtn>
-          </BulkToolbar>
+          {selected.size > 0 && (
+            <BulkToolbar count={selected.size} onClear={() => setSelected(new Set())}>
+              <TBtn variant="success" onClick={() => setConfirmMarkPaid(true)}>
+                <Icon name="check-circle" className="w-3.5 h-3.5" />
+                Mark Paid
+              </TBtn>
+              <TBtn variant="default" onClick={() => setConfirmReminder(true)}>
+                <Icon name="mail" className="w-3.5 h-3.5" />
+                Send Reminder
+              </TBtn>
+              <TBtn variant="default" onClick={doExport}>
+                <Icon name="download" className="w-3.5 h-3.5" />
+                Export
+              </TBtn>
+              <TBtn variant="danger" onClick={() => setConfirmVoid(true)}>
+                <Icon name="trash" className="w-3.5 h-3.5" />
+                Void
+              </TBtn>
+            </BulkToolbar>
+          )}
 
           {/* Table */}
           <div className="overflow-x-auto flex-1">

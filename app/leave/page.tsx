@@ -113,7 +113,7 @@ export default function MyLeavePage() {
       </div>
 
       {/* Request leave modal */}
-      <Modal isOpen={showRequest} onClose={() => setShowRequest(false)} title="Request Leave" size="sm">
+      <Modal isOpen={showRequest} onClose={() => setShowRequest(false)} title="Request Leave">
         {submitted ? (
           <div className="flex flex-col items-center gap-3 py-6">
             <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ background: "#ECFDF5" }}>
@@ -142,10 +142,7 @@ export default function MyLeavePage() {
                 <textarea className={`${inputCls} resize-none`} rows={3} placeholder="Brief reason for leave…" value={form.reason} onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))} />
               </FormField>
             </div>
-            <ModalFooter>
-              <button onClick={() => setShowRequest(false)} className="flex-1 rounded-lg py-2 text-[13px] font-medium border border-[#E2E8F0] text-[#64748B] hover:bg-[#F5F7FA] transition-colors">Cancel</button>
-              <button onClick={handleSubmit} className="flex-1 rounded-lg py-2 text-[13px] font-semibold text-white hover:opacity-90 transition-opacity" style={{ background: "#0B2349" }}>Submit Request</button>
-            </ModalFooter>
+            <ModalFooter onClose={() => setShowRequest(false)} confirmLabel="Submit Request" onConfirm={handleSubmit} />
           </>
         )}
       </Modal>

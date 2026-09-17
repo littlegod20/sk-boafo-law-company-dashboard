@@ -535,7 +535,7 @@ export default function Sidebar() {
       {/* ------------------------------------------------------------------ */}
       {/* My Profile modal                                                    */}
       {/* ------------------------------------------------------------------ */}
-      <Modal isOpen={showProfile} onClose={() => setShowProfile(false)} title="My Profile" size="sm">
+      <Modal isOpen={showProfile} onClose={() => setShowProfile(false)} title="My Profile">
         <div className="flex flex-col items-center gap-4 py-2">
           {/* Avatar */}
           <div
@@ -565,15 +565,11 @@ export default function Sidebar() {
           ))}
         </div>
 
-        <ModalFooter>
-          <button
-            onClick={() => { setShowProfile(false); router.push("/settings"); }}
-            className="flex-1 rounded-lg py-2 text-[13px] font-semibold text-white transition-opacity hover:opacity-90"
-            style={{ background: "#0B2349" }}
-          >
-            Edit in Account Settings
-          </button>
-        </ModalFooter>
+        <ModalFooter
+          onClose={() => setShowProfile(false)}
+          confirmLabel="Edit in Account Settings"
+          onConfirm={() => { setShowProfile(false); router.push("/settings"); }}
+        />
       </Modal>
 
       {/* ------------------------------------------------------------------ */}
@@ -583,7 +579,6 @@ export default function Sidebar() {
         isOpen={showChangePassword}
         onClose={() => setShowChangePassword(false)}
         title="Change Password"
-        size="sm"
       >
         {pwSaved ? (
           <div className="flex flex-col items-center gap-3 py-6">
@@ -632,21 +627,11 @@ export default function Sidebar() {
                 </p>
               )}
             </div>
-            <ModalFooter>
-              <button
-                onClick={() => setShowChangePassword(false)}
-                className="flex-1 rounded-lg py-2 text-[13px] font-medium border border-[#E2E8F0] text-[#64748B] hover:bg-[#F5F7FA] transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleChangePassword}
-                className="flex-1 rounded-lg py-2 text-[13px] font-semibold text-white transition-opacity hover:opacity-90"
-                style={{ background: "#0B2349" }}
-              >
-                Update Password
-              </button>
-            </ModalFooter>
+            <ModalFooter
+              onClose={() => setShowChangePassword(false)}
+              confirmLabel="Update Password"
+              onConfirm={handleChangePassword}
+            />
           </>
         )}
       </Modal>
