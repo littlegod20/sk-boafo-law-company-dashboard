@@ -1,14 +1,46 @@
-import { internalMutation } from "./_generated/server";
+import { createAccount } from "@convex-dev/auth/server";
+import { internalAction, internalMutation } from "./_generated/server";
+import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 
-// Run with: npx convex run seed:seed
-export const seed = internalMutation({
+/** Demo logins — must match app/login/page.tsx DEMO_USERS */
+const DEMO_USERS = [
+  { name: "S.K. Boafo",      email: "sk.boafo@skboafo.gh",    password: "Chambers2026",  role: "managing_partner" as const, dept: "Litigation & Dispute Resolution", barNumber: "GHA-BAR-2009-0047", joinedDate: "Jan 2009", workPhone: "+233 30 277 0001", employeeId: "EMP-001" },
+  { name: "Kwabena Asare",   email: "k.asare@skboafo.gh",      password: "Chambers2026",  role: "partner"          as const, dept: "Litigation",                     barNumber: "GHA-BAR-2015-0112", joinedDate: "Aug 2015", workPhone: "+233 30 277 0011", employeeId: "EMP-011" },
+  { name: "Kojo Frimpong",   email: "k.frimpong@skboafo.gh",   password: "Chambers2026",  role: "partner"          as const, dept: "Corporate Law",                  barNumber: "GHA-BAR-2012-0078", joinedDate: "Mar 2012", workPhone: "+233 30 277 0002", employeeId: "EMP-002" },
+  { name: "Kofi Mensah",     email: "k.mensah@skboafo.gh",     password: "Associate2026", role: "associate"        as const, dept: "Litigation",                     barNumber: "GHA-BAR-2020-0201", joinedDate: "Feb 2020", workPhone: "+233 30 277 0004", employeeId: "EMP-004" },
+  { name: "Abena Asante",    email: "a.asante@skboafo.gh",     password: "Associate2026", role: "associate"        as const, dept: "Conveyancing",                   barNumber: "GHA-BAR-2018-0167", joinedDate: "Jun 2018", workPhone: "+233 30 277 0003", employeeId: "EMP-003" },
+  { name: "Ama Darko",       email: "a.darko@skboafo.gh",      password: "Paralegal2026", role: "paralegal"        as const, dept: "Corporate Law",                  barNumber: undefined,           joinedDate: "Sep 2021", workPhone: "+233 30 277 0005", employeeId: "EMP-005" },
+  { name: "Akua Twum",       email: "a.twum@skboafo.gh",       password: "Paralegal2026", role: "paralegal"        as const, dept: "Conveyancing",                   barNumber: undefined,           joinedDate: "Mar 2024", workPhone: "+233 30 277 0010", employeeId: "EMP-010" },
+  { name: "Nana Acheampong", email: "n.acheampong@skboafo.gh", password: "Admin2026",     role: "admin"            as const, dept: "Administration",                 barNumber: undefined,           joinedDate: "Nov 2019", workPhone: "+233 30 277 0009", employeeId: "EMP-009" },
+  { name: "Yaa Bonsu",       email: "y.bonsu@skboafo.gh",      password: "HROfficer2026", role: "hr_officer"       as const, dept: "Human Resources",                barNumber: undefined,           joinedDate: "Jul 2020", workPhone: "+233 30 277 0008", employeeId: "EMP-008" },
+];
+
+/**
+ * Wipe domain + auth credential tables, then insert demo profiles and sample data.
+ * Password accounts are created by {@link seed} (action) via createAccount.
+ *
+ * Run with: npx convex run seed:seed
+ */
+export const wipeAndSeedData = internalMutation({
   args: {},
   handler: async (ctx) => {
     // ── Wipe existing data ───────────────────────────────────────────────────
     const tables = [
-      "announcements", "messages", "leaveRequests",
-      "invoices", "cases", "clients", "users",
+      "announcements",
+      "messages",
+      "leaveRequests",
+      "invoices",
+      "cases",
+      "clients",
+      "users",
+      // Auth tables so re-seed can recreate password accounts cleanly
+      "authAccounts",
+      "authSessions",
+      "authRefreshTokens",
+      "authVerificationCodes",
+      "authVerifiers",
+      "authRateLimits",
     ] as const;
 
     for (const table of tables) {
@@ -16,21 +48,9 @@ export const seed = internalMutation({
       for (const row of rows) await ctx.db.delete(row._id);
     }
 
-    // ── Users ────────────────────────────────────────────────────────────────
-    const userDefs = [
-      { name: "S.K. Boafo",       email: "sk.boafo@skboafo.gh",       role: "managing_partner" as const, dept: "Litigation & Dispute Resolution", barNumber: "GHA-BAR-2009-0047", joinedDate: "Jan 2009",  workPhone: "+233 30 277 0001", employeeId: "EMP-001" },
-      { name: "Kwabena Asare",    email: "k.asare@skboafo.gh",         role: "partner"          as const, dept: "Litigation",                     barNumber: "GHA-BAR-2015-0112", joinedDate: "Aug 2015",  workPhone: "+233 30 277 0011", employeeId: "EMP-011" },
-      { name: "Kojo Frimpong",    email: "k.frimpong@skboafo.gh",      role: "partner"          as const, dept: "Corporate Law",                  barNumber: "GHA-BAR-2012-0078", joinedDate: "Mar 2012",  workPhone: "+233 30 277 0002", employeeId: "EMP-002" },
-      { name: "Kofi Mensah",      email: "k.mensah@skboafo.gh",        role: "associate"        as const, dept: "Litigation",                     barNumber: "GHA-BAR-2020-0201", joinedDate: "Feb 2020",  workPhone: "+233 30 277 0004", employeeId: "EMP-004" },
-      { name: "Abena Asante",     email: "a.asante@skboafo.gh",        role: "associate"        as const, dept: "Conveyancing",                   barNumber: "GHA-BAR-2018-0167", joinedDate: "Jun 2018",  workPhone: "+233 30 277 0003", employeeId: "EMP-003" },
-      { name: "Ama Darko",        email: "a.darko@skboafo.gh",         role: "paralegal"        as const, dept: "Corporate Law",                  barNumber: undefined,           joinedDate: "Sep 2021",  workPhone: "+233 30 277 0005", employeeId: "EMP-005" },
-      { name: "Akua Twum",        email: "a.twum@skboafo.gh",          role: "paralegal"        as const, dept: "Conveyancing",                   barNumber: undefined,           joinedDate: "Mar 2024",  workPhone: "+233 30 277 0010", employeeId: "EMP-010" },
-      { name: "Nana Acheampong",  email: "n.acheampong@skboafo.gh",    role: "admin"            as const, dept: "Administration",                 barNumber: undefined,           joinedDate: "Nov 2019",  workPhone: "+233 30 277 0009", employeeId: "EMP-009" },
-      { name: "Yaa Bonsu",        email: "y.bonsu@skboafo.gh",         role: "hr_officer"       as const, dept: "Human Resources",               barNumber: undefined,           joinedDate: "Jul 2020",  workPhone: "+233 30 277 0008", employeeId: "EMP-008" },
-    ];
-
+    // ── Users (profiles only — passwords attached in seed action) ────────────
     const userIds: Record<string, Id<"users">> = {};
-    for (const u of userDefs) {
+    for (const u of DEMO_USERS) {
       const id = await ctx.db.insert("users", {
         name: u.name,
         email: u.email,
@@ -62,7 +82,7 @@ export const seed = internalMutation({
       { clientRef: "CLT-012", name: "Ama Sarpong",          type: "Individual" as const, contact: "+233 55 224 9910", email: "ama.sarpong@hotmail.com",    attorney: "D. Owusu",  activeCases: 0, totalCases: 1, joined: "Jun 2026" },
     ];
 
-    const clientIds: Record<string, any> = {};
+    const clientIds: Record<string, Id<"clients">> = {};
     for (const c of clientDefs) {
       const id = await ctx.db.insert("clients", {
         clientRef: c.clientRef,
@@ -95,12 +115,12 @@ export const seed = internalMutation({
       { caseNumber: "SKB-2026-036", clientRef: "CLT-012", clientType: "Individual",type: "Employment",       attorney: "D. Owusu",  status: "Closed"  as const, priority: "Low"    as const, openedDate: "01 Jun 2026" },
     ];
 
-    const caseIds: Record<string, any> = {};
+    const caseIds: Record<string, Id<"cases">> = {};
     for (const c of caseDefs) {
       const id = await ctx.db.insert("cases", {
         caseNumber: c.caseNumber,
         clientId: clientIds[c.clientRef],
-        clientName: clientDefs.find(cl => cl.clientRef === c.clientRef)!.name,
+        clientName: clientDefs.find((cl) => cl.clientRef === c.clientRef)!.name,
         clientType: c.clientType,
         type: c.type,
         status: c.status,
@@ -125,7 +145,7 @@ export const seed = internalMutation({
     ];
 
     for (const inv of invoiceDefs) {
-      const client = clientDefs.find(c => c.clientRef === inv.clientRef)!;
+      const client = clientDefs.find((c) => c.clientRef === inv.clientRef)!;
       await ctx.db.insert("invoices", {
         invoiceNumber: inv.invoiceNumber,
         clientId: clientIds[inv.clientRef],
@@ -142,7 +162,6 @@ export const seed = internalMutation({
     }
 
     // ── Leave Requests ────────────────────────────────────────────────────────
-    // Note: these use employeeId — mapping by email to the seeded user
     const leaveDefs = [
       { employeeEmail: "y.bonsu@skboafo.gh",     employeeName: "Yaa Bonsu",      role: "HR Officer",   type: "Annual Leave",    from: "22 Sep 2026", to: "26 Sep 2026", days: 5,  status: "Pending"  as const, applied: "15 Sep 2026" },
       { employeeEmail: "k.mensah@skboafo.gh",    employeeName: "Kofi Mensah",    role: "Associate",    type: "Sick Leave",      from: "17 Sep 2026", to: "17 Sep 2026", days: 1,  status: "Pending"  as const, applied: "16 Sep 2026" },
@@ -156,7 +175,8 @@ export const seed = internalMutation({
     ];
 
     for (const lr of leaveDefs) {
-      const approvedByEmail = "approvedByEmail" in lr ? (lr as { approvedByEmail?: string }).approvedByEmail : undefined;
+      const approvedByEmail =
+        "approvedByEmail" in lr ? (lr as { approvedByEmail?: string }).approvedByEmail : undefined;
       await ctx.db.insert("leaveRequests", {
         employeeId: userIds[lr.employeeEmail],
         employeeName: lr.employeeName,
@@ -201,6 +221,44 @@ export const seed = internalMutation({
       read: false,
     });
 
-    return { status: "Seed complete", users: userDefs.length, clients: clientDefs.length, cases: caseDefs.length, invoices: invoiceDefs.length };
+    return {
+      status: "Data seeded",
+      users: DEMO_USERS.length,
+      clients: clientDefs.length,
+      cases: caseDefs.length,
+      invoices: invoiceDefs.length,
+    };
+  },
+});
+
+/**
+ * Full demo seed: wipe + sample data, then create password auth accounts
+ * (Scrypt-hashed via Convex Auth) so login signIn works immediately.
+ *
+ * Run with: npx convex run seed:seed
+ */
+export const seed = internalAction({
+  args: {},
+  handler: async (ctx) => {
+    const data = await ctx.runMutation(internal.seed.wipeAndSeedData, {});
+
+    for (const u of DEMO_USERS) {
+      // createAccount hashes the secret with the Password provider's Scrypt crypto.
+      // createOrUpdateUser in auth.ts links to the already-seeded users row by email.
+      await createAccount(ctx, {
+        provider: "password",
+        account: { id: u.email, secret: u.password },
+        profile: {
+          email: u.email,
+          name: u.name,
+        },
+      });
+    }
+
+    return {
+      ...data,
+      status: "Seed complete",
+      passwordAccounts: DEMO_USERS.length,
+    };
   },
 });
