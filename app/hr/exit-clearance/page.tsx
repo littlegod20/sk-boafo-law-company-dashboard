@@ -4,164 +4,45 @@ import { useState } from "react";
 import { Icon } from "@/components/Icons";
 import { Modal, ConfirmDialog, FormField, ModalFooter, inputCls } from "@/components/Modal";
 import { BulkToolbar, TBtn, Checkbox, Pagination } from "@/components/TableControls";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 
-const PAGE_SIZE = 6;
-
-const EXITS = [
-  {
-    id: "EX-2026-006",
-    name: "Kofi Asante",
-    role: "Associate — Litigation",
-    dept: "Litigation",
-    lastDay: "30 Sep 2026",
-    reason: "Resignation",
-    status: "In Progress",
-    clearanceItems: [
-      { item: "Resignation letter received",  done: true,  owner: "HR" },
-      { item: "Notice period acknowledged",    done: true,  owner: "HR" },
-      { item: "Handover document prepared",    done: true,  owner: "Employee" },
-      { item: "Active matters reassigned",     done: false, owner: "Line Manager" },
-      { item: "IT equipment returned",         done: false, owner: "IT" },
-      { item: "System access revoked",         done: false, owner: "IT" },
-      { item: "Access card returned",          done: false, owner: "Admin" },
-      { item: "Final payroll processed",       done: false, owner: "Finance" },
-      { item: "Leave balance settled",         done: false, owner: "HR" },
-      { item: "Exit interview conducted",      done: false, owner: "HR" },
-    ],
-  },
-  {
-    id: "EX-2026-005",
-    name: "Abena Owusu",
-    role: "Paralegal",
-    dept: "Corporate Law",
-    lastDay: "15 Sep 2026",
-    reason: "End of Contract",
-    status: "In Progress",
-    clearanceItems: [
-      { item: "Resignation letter received",  done: true,  owner: "HR" },
-      { item: "Notice period acknowledged",    done: true,  owner: "HR" },
-      { item: "Handover document prepared",    done: true,  owner: "Employee" },
-      { item: "Active matters reassigned",     done: true,  owner: "Line Manager" },
-      { item: "IT equipment returned",         done: true,  owner: "IT" },
-      { item: "System access revoked",         done: true,  owner: "IT" },
-      { item: "Access card returned",          done: false, owner: "Admin" },
-      { item: "Final payroll processed",       done: false, owner: "Finance" },
-      { item: "Leave balance settled",         done: false, owner: "HR" },
-      { item: "Exit interview conducted",      done: false, owner: "HR" },
-    ],
-  },
-  {
-    id: "EX-2026-004",
-    name: "Kweku Mensah",
-    role: "Legal Secretary",
-    dept: "Administration",
-    lastDay: "31 Aug 2026",
-    reason: "Resignation",
-    status: "Cleared",
-    clearanceItems: [
-      { item: "Resignation letter received",  done: true, owner: "HR" },
-      { item: "Notice period acknowledged",    done: true, owner: "HR" },
-      { item: "Handover document prepared",    done: true, owner: "Employee" },
-      { item: "Active matters reassigned",     done: true, owner: "Line Manager" },
-      { item: "IT equipment returned",         done: true, owner: "IT" },
-      { item: "System access revoked",         done: true, owner: "IT" },
-      { item: "Access card returned",          done: true, owner: "Admin" },
-      { item: "Final payroll processed",       done: true, owner: "Finance" },
-      { item: "Leave balance settled",         done: true, owner: "HR" },
-      { item: "Exit interview conducted",      done: true, owner: "HR" },
-    ],
-  },
-  {
-    id: "EX-2026-003",
-    name: "Yaa Sarpong",
-    role: "IT Support Specialist",
-    dept: "IT",
-    lastDay: "15 Aug 2026",
-    reason: "Resignation",
-    status: "Cleared",
-    clearanceItems: [
-      { item: "Resignation letter received",  done: true, owner: "HR" },
-      { item: "Notice period acknowledged",    done: true, owner: "HR" },
-      { item: "Handover document prepared",    done: true, owner: "Employee" },
-      { item: "Active matters reassigned",     done: true, owner: "Line Manager" },
-      { item: "IT equipment returned",         done: true, owner: "IT" },
-      { item: "System access revoked",         done: true, owner: "IT" },
-      { item: "Access card returned",          done: true, owner: "Admin" },
-      { item: "Final payroll processed",       done: true, owner: "Finance" },
-      { item: "Leave balance settled",         done: true, owner: "HR" },
-      { item: "Exit interview conducted",      done: true, owner: "HR" },
-    ],
-  },
-  {
-    id: "EX-2026-002",
-    name: "Nana Asare",
-    role: "Corporate Law Associate",
-    dept: "Corporate Law",
-    lastDay: "31 Jul 2026",
-    reason: "Redundancy",
-    status: "Cleared",
-    clearanceItems: [
-      { item: "Resignation letter received",  done: true, owner: "HR" },
-      { item: "Notice period acknowledged",    done: true, owner: "HR" },
-      { item: "Handover document prepared",    done: true, owner: "Employee" },
-      { item: "Active matters reassigned",     done: true, owner: "Line Manager" },
-      { item: "IT equipment returned",         done: true, owner: "IT" },
-      { item: "System access revoked",         done: true, owner: "IT" },
-      { item: "Access card returned",          done: true, owner: "Admin" },
-      { item: "Final payroll processed",       done: true, owner: "Finance" },
-      { item: "Leave balance settled",         done: true, owner: "HR" },
-      { item: "Exit interview conducted",      done: true, owner: "HR" },
-    ],
-  },
-  {
-    id: "EX-2026-001",
-    name: "Ama Frimpong",
-    role: "HR Administrator",
-    dept: "Human Resources",
-    lastDay: "30 Jun 2026",
-    reason: "Retirement",
-    status: "Cleared",
-    clearanceItems: [
-      { item: "Resignation letter received",  done: true, owner: "HR" },
-      { item: "Notice period acknowledged",    done: true, owner: "HR" },
-      { item: "Handover document prepared",    done: true, owner: "Employee" },
-      { item: "Active matters reassigned",     done: true, owner: "Line Manager" },
-      { item: "IT equipment returned",         done: true, owner: "IT" },
-      { item: "System access revoked",         done: true, owner: "IT" },
-      { item: "Access card returned",          done: true, owner: "Admin" },
-      { item: "Final payroll processed",       done: true, owner: "Finance" },
-      { item: "Leave balance settled",         done: true, owner: "HR" },
-      { item: "Exit interview conducted",      done: true, owner: "HR" },
-    ],
-  },
-];
-
-const REASON_OPTIONS = ["Resignation", "End of Contract", "Redundancy", "Retirement", "Dismissal"];
-const FILTERS = ["All", "In Progress", "Cleared"];
+const PAGE_SIZE = 8;
 
 const STATUS_STYLE: Record<string, { bg: string; text: string }> = {
   "In Progress": { bg: "#FFFBEB", text: "#D97706" },
   "Cleared":     { bg: "#ECFDF5", text: "#059669" },
 };
 
-type Exit = typeof EXITS[number];
+type ExitClearance = NonNullable<ReturnType<typeof useQuery<typeof api.exitClearances.list>>>[number];
 
 export default function ExitClearancePage() {
-  const [exits] = useState<Exit[]>(EXITS);
-  const [filter, setFilter] = useState("All");
-  const [page, setPage] = useState(1);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [detailItem, setDetailItem] = useState<Exit | null>(null);
-  const [showNew, setShowNew] = useState(false);
-  const [addedNew, setAddedNew] = useState(false);
-  const [confirmClear, setConfirmClear] = useState(false);
-  const [form, setForm] = useState({ name: "", role: "", dept: "", lastDay: "", reason: REASON_OPTIONS[0] });
+  const clearances    = useQuery(api.exitClearances.list) ?? [];
+  const createExit    = useMutation(api.exitClearances.create);
+  const toggleItem    = useMutation(api.exitClearances.toggleItem);
+  const markCleared   = useMutation(api.exitClearances.markCleared);
 
-  const filtered   = exits.filter((e) => filter === "All" || e.status === filter);
-  const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  const pageIds    = paginated.map((e) => e.id);
+  const [page,           setPage]           = useState(1);
+  const [selected,       setSelected]       = useState<Set<string>>(new Set());
+  const [detailRecord,   setDetailRecord]   = useState<ExitClearance | null>(null);
+  const [showNew,        setShowNew]        = useState(false);
+  const [created,        setCreated]        = useState(false);
+  const [creating,       setCreating]       = useState(false);
+  const [confirmClear,   setConfirmClear]   = useState(false);
+  const [clearing,       setClearing]       = useState(false);
+  const [togglingIdx,    setTogglingIdx]    = useState<number | null>(null);
+  const [form,           setForm]           = useState({ name: "", role: "", dept: "", lastDay: "", reason: "" });
+
+  const paginated = clearances.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const pageIds   = paginated.map((c) => c._id);
   const allPageSelected  = pageIds.length > 0 && pageIds.every((id) => selected.has(id));
   const somePageSelected = pageIds.some((id) => selected.has(id));
+
+  // Keep detail in sync with live query
+  const liveDetail = detailRecord
+    ? (clearances.find((c) => c._id === detailRecord._id) ?? detailRecord)
+    : null;
 
   function toggleAll() {
     setSelected((prev) => {
@@ -172,28 +53,56 @@ export default function ExitClearancePage() {
     });
   }
 
-  function toggleRow(id: string) {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
+  async function handleCreate() {
+    if (!form.name || !form.role || !form.dept || !form.lastDay || !form.reason) return;
+    setCreating(true);
+    try {
+      await createExit({
+        name:    form.name,
+        role:    form.role,
+        dept:    form.dept,
+        lastDay: form.lastDay,
+        reason:  form.reason,
+      });
+      setCreated(true);
+    } finally {
+      setCreating(false);
+    }
   }
 
-  const inProgress = exits.filter((e) => e.status === "In Progress").length;
-  const cleared    = exits.filter((e) => e.status === "Cleared").length;
-  const total      = exits.length;
+  async function handleMarkCleared() {
+    setClearing(true);
+    try {
+      await markCleared({ ids: Array.from(selected) as Id<"exitClearances">[] });
+      setSelected(new Set());
+      setConfirmClear(false);
+    } finally {
+      setClearing(false);
+    }
+  }
+
+  async function handleToggleItem(id: Id<"exitClearances">, itemIndex: number) {
+    setTogglingIdx(itemIndex);
+    try {
+      await toggleItem({ id, itemIndex });
+    } finally {
+      setTogglingIdx(null);
+    }
+  }
+
+  const inProgress = clearances.filter((c) => c.status === "In Progress").length;
+  const cleared    = clearances.filter((c) => c.status === "Cleared").length;
+  const pendingItems = clearances.reduce((a, c) => a + c.clearanceItems.filter((i) => !i.done).length, 0);
 
   return (
     <div className="space-y-5 max-w-[1200px]">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-[18px] font-bold text-[#0B2349]">Exit Clearance</h2>
-          <p className="text-[12px] text-[#94A3B8] mt-0.5">Manage employee exit processes and clearance</p>
+          <p className="text-[12px] text-[#94A3B8] mt-0.5">Manage employee offboarding and clearance items</p>
         </div>
         <button
-          onClick={() => { setShowNew(true); setAddedNew(false); }}
+          onClick={() => { setShowNew(true); setCreated(false); setForm({ name: "", role: "", dept: "", lastDay: "", reason: "" }); }}
           className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-[13px] font-semibold text-white hover:opacity-90 transition-opacity"
           style={{ background: "#0B2349" }}
         >
@@ -205,10 +114,10 @@ export default function ExitClearancePage() {
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: "Total Exits",    value: String(total),       icon: "log-out" as const,      color: "#0B2349", bg: "#EFF4FF" },
-          { label: "In Progress",    value: String(inProgress),  icon: "clock" as const,        color: "#D97706", bg: "#FFFBEB" },
-          { label: "Cleared",        value: String(cleared),     icon: "check-circle" as const, color: "#059669", bg: "#ECFDF5" },
-          { label: "This Quarter",   value: String(exits.filter((e) => e.lastDay.includes("Sep 2026") || e.lastDay.includes("Aug 2026") || e.lastDay.includes("Jul 2026")).length), icon: "calendar" as const, color: "#7C3AED", bg: "#F5F3FF" },
+          { label: "Total Exits",    value: String(clearances.length), icon: "users" as const,        color: "#0B2349", bg: "#EFF4FF" },
+          { label: "In Progress",   value: String(inProgress),         icon: "clock" as const,        color: "#D97706", bg: "#FFFBEB" },
+          { label: "Cleared",       value: String(cleared),            icon: "check-circle" as const, color: "#059669", bg: "#ECFDF5" },
+          { label: "Pending Items", value: String(pendingItems),        icon: "list" as const,         color: "#DC2626", bg: "#FFF5F5" },
         ].map((k) => (
           <div key={k.label} className="bg-white rounded-xl p-4" style={{ border: "1px solid #F1F5F9", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
             <div className="flex items-center justify-between mb-3">
@@ -222,128 +131,136 @@ export default function ExitClearancePage() {
         ))}
       </div>
 
-      {/* Filters */}
-      <div className="flex items-center gap-2">
-        {FILTERS.map((f) => (
-          <button key={f} onClick={() => { setFilter(f); setPage(1); setSelected(new Set()); }}
-            className="rounded-lg px-3 py-1.5 text-[12px] font-medium transition-colors"
-            style={filter === f ? { background: "#0B2349", color: "white" } : { background: "white", color: "#64748B", border: "1px solid #E2E8F0" }}>
-            {f}
-          </button>
-        ))}
-      </div>
-
       {/* Bulk toolbar */}
       {selected.size > 0 && (
         <BulkToolbar count={selected.size} onClear={() => setSelected(new Set())}>
-          <TBtn variant="success" onClick={() => setConfirmClear(true)}>
-            <Icon name="check-circle" className="w-3.5 h-3.5" /> Mark Cleared
+          <TBtn onClick={() => setConfirmClear(true)}>
+            <Icon name="check-circle" className="w-3.5 h-3.5" strokeWidth={2} /> Mark Cleared
           </TBtn>
         </BulkToolbar>
       )}
 
       {/* Table */}
       <div className="bg-white rounded-xl overflow-hidden" style={{ border: "1px solid #F1F5F9", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-        <div className="overflow-x-auto">
-          <table className="w-full text-[12px]">
-            <thead>
-              <tr style={{ background: "#FAFBFC" }}>
-                <th className="pl-5 pr-3 py-3.5 w-10">
-                  <Checkbox checked={allPageSelected} indeterminate={somePageSelected && !allPageSelected} onChange={toggleAll} />
-                </th>
-                {["Employee", "Department", "Last Day", "Reason", "Progress", "Status", ""].map((h) => (
-                  <th key={h} className="px-5 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wide text-[#94A3B8]">{h}</th>
-                ))}
+        <table className="w-full text-[13px]">
+          <thead>
+            <tr style={{ background: "#FAFBFC" }}>
+              <th className="pl-5 pr-3 py-3.5 w-10">
+                <Checkbox checked={allPageSelected} indeterminate={somePageSelected && !allPageSelected} onChange={toggleAll} />
+              </th>
+              {["Employee", "Department", "Last Day", "Reason", "Clearance", "Status", ""].map((h) => (
+                <th key={h} className="px-5 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wide text-[#94A3B8]">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {paginated.map((c) => {
+              const ss        = STATUS_STYLE[c.status] ?? STATUS_STYLE["In Progress"];
+              const doneItems = c.clearanceItems.filter((i) => i.done).length;
+              const isSelected = selected.has(c._id);
+              return (
+                <tr key={c._id} className="border-t border-[#F8FAFC] hover:bg-[#FAFBFC] transition-colors" style={isSelected ? { background: "#EFF4FF" } : {}}>
+                  <td className="pl-5 pr-3 py-3.5 w-10">
+                    <Checkbox checked={isSelected} onChange={() => {
+                      setSelected((prev) => { const next = new Set(prev); if (next.has(c._id)) next.delete(c._id); else next.add(c._id); return next; });
+                    }} />
+                  </td>
+                  <td className="px-5 py-3.5">
+                    <p className="font-semibold text-[#1e293b]">{c.name}</p>
+                    <p className="text-[10px] text-[#94A3B8]">{c.role} · {c.exitRef}</p>
+                  </td>
+                  <td className="px-5 py-3.5 text-[#64748B]">{c.dept}</td>
+                  <td className="px-5 py-3.5 text-[#64748B]">{c.lastDay}</td>
+                  <td className="px-5 py-3.5 text-[#64748B]">{c.reason}</td>
+                  <td className="px-5 py-3.5">
+                    <div className="flex items-center gap-2">
+                      <div className="w-20 h-1.5 rounded-full bg-[#F1F5F9] overflow-hidden">
+                        <div className="h-full rounded-full" style={{ width: `${Math.round((doneItems / c.clearanceItems.length) * 100)}%`, background: c.status === "Cleared" ? "#059669" : "#0B2349" }} />
+                      </div>
+                      <span className="text-[11px] text-[#94A3B8]">{doneItems}/{c.clearanceItems.length}</span>
+                    </div>
+                  </td>
+                  <td className="px-5 py-3.5">
+                    <span className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold" style={{ background: ss.bg, color: ss.text }}>{c.status}</span>
+                  </td>
+                  <td className="px-5 py-3.5">
+                    <button
+                      onClick={() => setDetailRecord(c)}
+                      className="rounded p-1.5 hover:bg-[#F1F5F9] text-[#94A3B8] hover:text-[#0B2349] transition-colors"
+                    >
+                      <Icon name="eye" className="w-3.5 h-3.5" />
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+            {clearances.length === 0 && (
+              <tr>
+                <td colSpan={8} className="px-5 py-16 text-center text-[12px] text-[#94A3B8]">No exit clearances found.</td>
               </tr>
-            </thead>
-            <tbody>
-              {paginated.map((e) => {
-                const ss = STATUS_STYLE[e.status];
-                const done = e.clearanceItems.filter((c) => c.done).length;
-                const pct  = Math.round((done / e.clearanceItems.length) * 100);
-                const isSel = selected.has(e.id);
-                return (
-                  <tr key={e.id} className="border-t border-[#F8FAFC] hover:bg-[#FAFBFF] transition-colors" style={isSel ? { background: "#EFF4FF" } : {}}>
-                    <td className="pl-5 pr-3 py-3.5 w-10">
-                      <Checkbox checked={isSel} onChange={() => toggleRow(e.id)} />
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0" style={{ background: "#EFF4FF", color: "#0B2349" }}>
-                          {e.name.split(" ").map((w) => w[0]).join("")}
-                        </div>
-                        <div>
-                          <p className="font-semibold text-[#1e293b]">{e.name}</p>
-                          <p className="text-[10px] text-[#94A3B8] font-mono">{e.id}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-5 py-3.5 text-[#64748B]">{e.dept}</td>
-                    <td className="px-5 py-3.5 font-medium text-[#1e293b]">{e.lastDay}</td>
-                    <td className="px-5 py-3.5 text-[#64748B]">{e.reason}</td>
-                    <td className="px-5 py-3.5">
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 h-1.5 rounded-full bg-[#F1F5F9] overflow-hidden min-w-[60px]">
-                          <div className="h-full rounded-full" style={{ width: `${pct}%`, background: pct === 100 ? "#059669" : "#0B2349" }} />
-                        </div>
-                        <span className="text-[11px] font-semibold text-[#64748B]">{done}/{e.clearanceItems.length}</span>
-                      </div>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <span className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold" style={{ background: ss.bg, color: ss.text }}>{e.status}</span>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <button onClick={() => setDetailItem(e)} className="rounded p-1.5 hover:bg-[#F1F5F9] text-[#94A3B8] hover:text-[#0B2349] transition-colors">
-                        <Icon name="eye" className="w-3.5 h-3.5" />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-        <Pagination page={page} total={filtered.length} pageSize={PAGE_SIZE} onChange={(p) => { setPage(p); setSelected(new Set()); }} />
+            )}
+          </tbody>
+        </table>
+        <Pagination page={page} total={clearances.length} pageSize={PAGE_SIZE} onChange={(p) => { setPage(p); setSelected(new Set()); }} />
       </div>
 
       {/* Detail modal */}
-      <Modal isOpen={!!detailItem} onClose={() => setDetailItem(null)} title={detailItem ? `${detailItem.name} — Exit Clearance` : ""} maxWidth="540px">
-        {detailItem && (
+      <Modal isOpen={!!liveDetail} onClose={() => setDetailRecord(null)} title={liveDetail ? `${liveDetail.name} — Exit Clearance` : ""} maxWidth="520px">
+        {liveDetail && (
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3 pb-3 border-b border-[#F1F5F9]">
+            <div className="grid grid-cols-2 gap-3 text-[13px]">
               {[
-                { label: "Role",      value: detailItem.role },
-                { label: "Last Day",  value: detailItem.lastDay },
-                { label: "Reason",   value: detailItem.reason },
-                { label: "Status",   value: detailItem.status },
-              ].map((r) => (
-                <div key={r.label}>
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-[#94A3B8]">{r.label}</p>
-                  <p className="text-[13px] font-medium text-[#1e293b] mt-0.5">{r.value}</p>
+                { label: "Role",     value: liveDetail.role },
+                { label: "Dept",     value: liveDetail.dept },
+                { label: "Last Day", value: liveDetail.lastDay },
+                { label: "Reason",   value: liveDetail.reason },
+              ].map(({ label, value }) => (
+                <div key={label} className="rounded-lg px-3 py-2 bg-[#F8FAFC]">
+                  <p className="text-[10px] text-[#94A3B8] font-semibold uppercase tracking-wide mb-0.5">{label}</p>
+                  <p className="text-[#1e293b] font-medium">{value}</p>
                 </div>
               ))}
             </div>
+
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-[#94A3B8] mb-2">Clearance Checklist</p>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-[#94A3B8] mb-2">Clearance Items</p>
               <div className="space-y-1.5">
-                {detailItem.clearanceItems.map((c, i) => (
-                  <div key={i} className="flex items-center gap-2.5 rounded-lg px-3 py-2" style={{ background: c.done ? "#ECFDF5" : "#F8FAFC" }}>
-                    <div className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0" style={{ background: c.done ? "#059669" : "#E2E8F0" }}>
-                      {c.done && <Icon name="check" className="w-2.5 h-2.5 text-white" strokeWidth={3} />}
-                    </div>
-                    <span className="flex-1 text-[12px]" style={{ color: c.done ? "#059669" : "#64748B" }}>{c.item}</span>
-                    <span className="text-[10px] font-medium px-2 py-0.5 rounded-full" style={{ background: "#F1F5F9", color: "#94A3B8" }}>{c.owner}</span>
-                  </div>
-                ))}
+                {liveDetail.clearanceItems.map((item, idx) => {
+                  const isToggling = togglingIdx === idx;
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => handleToggleItem(liveDetail._id as Id<"exitClearances">, idx)}
+                      disabled={isToggling}
+                      className="w-full flex items-center justify-between rounded-lg px-3 py-2.5 text-left transition-colors hover:opacity-80"
+                      style={{ background: item.done ? "#ECFDF5" : "#F8FAFC" }}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0 transition-colors" style={{ background: item.done ? "#059669" : "#E2E8F0" }}>
+                          {item.done && <Icon name="check" className="w-2.5 h-2.5 text-white" strokeWidth={3} />}
+                        </div>
+                        <span className="text-[12px]" style={{ color: item.done ? "#059669" : "#64748B" }}>{item.item}</span>
+                      </div>
+                      <span className="text-[10px] text-[#94A3B8] ml-3 flex-shrink-0">{item.owner}</span>
+                    </button>
+                  );
+                })}
               </div>
+            </div>
+
+            <div className="flex items-center justify-between rounded-lg px-3 py-2 bg-[#F8FAFC]">
+              <span className="text-[12px] text-[#64748B]">Overall status</span>
+              <span className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold" style={{ background: STATUS_STYLE[liveDetail.status].bg, color: STATUS_STYLE[liveDetail.status].text }}>
+                {liveDetail.status}
+              </span>
             </div>
           </div>
         )}
       </Modal>
 
-      {/* Initiate exit modal */}
-      <Modal isOpen={showNew} onClose={() => setShowNew(false)} title="Initiate Exit Process">
-        {addedNew ? (
+      {/* Initiate Exit modal */}
+      <Modal isOpen={showNew} onClose={() => setShowNew(false)} title="Initiate Exit Clearance">
+        {created ? (
           <div className="text-center py-6">
             <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3" style={{ background: "#ECFDF5" }}>
               <Icon name="check-circle" className="w-6 h-6" style={{ color: "#059669" }} />
@@ -354,29 +271,30 @@ export default function ExitClearancePage() {
           </div>
         ) : (
           <div className="space-y-4">
-            <FormField label="Employee Name" required>
-              <input className={inputCls} placeholder="e.g. Kofi Owusu" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
-            </FormField>
             <div className="grid grid-cols-2 gap-4">
+              <FormField label="Employee Name" required>
+                <input className={inputCls} placeholder="e.g. Kofi Agyeman" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+              </FormField>
               <FormField label="Role" required>
                 <input className={inputCls} placeholder="e.g. Associate" value={form.role} onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))} />
               </FormField>
               <FormField label="Department" required>
                 <select className={inputCls} value={form.dept} onChange={(e) => setForm((f) => ({ ...f, dept: e.target.value }))}>
                   <option value="">Select...</option>
-                  {["Litigation", "Corporate Law", "Conveyancing", "Family Law", "Human Resources", "IT"].map((d) => <option key={d}>{d}</option>)}
+                  {["Litigation", "Corporate Law", "Conveyancing", "Family Law", "Human Resources", "Administration", "IT"].map((d) => <option key={d}>{d}</option>)}
                 </select>
               </FormField>
-              <FormField label="Last Working Day" required>
+              <FormField label="Last Day" required>
                 <input type="date" className={inputCls} value={form.lastDay} onChange={(e) => setForm((f) => ({ ...f, lastDay: e.target.value }))} />
               </FormField>
-              <FormField label="Exit Reason">
-                <select className={inputCls} value={form.reason} onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))}>
-                  {REASON_OPTIONS.map((r) => <option key={r}>{r}</option>)}
-                </select>
-              </FormField>
             </div>
-            <ModalFooter onClose={() => setShowNew(false)} confirmLabel="Initiate Exit" onConfirm={() => { if (form.name && form.role && form.dept && form.lastDay) setAddedNew(true); }} />
+            <FormField label="Reason for Leaving" required>
+              <select className={inputCls} value={form.reason} onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))}>
+                <option value="">Select...</option>
+                {["Resignation", "Contract End", "Retirement", "Redundancy", "Termination"].map((r) => <option key={r}>{r}</option>)}
+              </select>
+            </FormField>
+            <ModalFooter onClose={() => setShowNew(false)} confirmLabel={creating ? "Creating…" : "Initiate Exit"} onConfirm={handleCreate} />
           </div>
         )}
       </Modal>
@@ -384,10 +302,10 @@ export default function ExitClearancePage() {
       <ConfirmDialog
         isOpen={confirmClear}
         onClose={() => setConfirmClear(false)}
-        onConfirm={() => { setSelected(new Set()); setConfirmClear(false); }}
+        onConfirm={handleMarkCleared}
         title="Mark as cleared?"
-        message={`Mark ${selected.size} exit record${selected.size !== 1 ? "s" : ""} as fully cleared?`}
-        confirmLabel="Mark Cleared"
+        message={`Mark ${selected.size} record${selected.size !== 1 ? "s" : ""} as fully cleared? All checklist items will be marked done.`}
+        confirmLabel={clearing ? "Clearing…" : "Mark Cleared"}
         variant="success"
       />
     </div>

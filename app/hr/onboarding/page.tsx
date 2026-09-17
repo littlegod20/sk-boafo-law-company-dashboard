@@ -3,99 +3,11 @@
 import { useState } from "react";
 import { Icon } from "@/components/Icons";
 import { Modal, ConfirmDialog, FormField, ModalFooter, inputCls } from "@/components/Modal";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 
 const STAGES = ["All", "Pre-arrival", "Week 1", "Month 1", "Completed"];
-
-const ONBOARDEES = [
-  {
-    id: "ONB-2026-007",
-    name: "Akosua Mensah",
-    role: "Associate — Litigation",
-    dept: "Litigation",
-    startDate: "22 Sep 2026",
-    stage: "Pre-arrival",
-    progress: 20,
-    buddy: "Kofi Owusu",
-    checklist: [
-      { task: "Offer letter signed",          done: true,  category: "Pre-arrival" },
-      { task: "Right to work documents",       done: true,  category: "Pre-arrival" },
-      { task: "IT setup request submitted",    done: false, category: "Pre-arrival" },
-      { task: "Desk & access card arranged",   done: false, category: "Pre-arrival" },
-      { task: "Orientation meeting scheduled", done: false, category: "Week 1" },
-      { task: "Introduction to team",          done: false, category: "Week 1" },
-      { task: "System access confirmed",       done: false, category: "Week 1" },
-      { task: "HR induction completed",        done: false, category: "Week 1" },
-      { task: "First matter assigned",         done: false, category: "Month 1" },
-      { task: "30-day check-in",               done: false, category: "Month 1" },
-    ],
-  },
-  {
-    id: "ONB-2026-006",
-    name: "Kweku Acheampong",
-    role: "Paralegal",
-    dept: "Conveyancing",
-    startDate: "15 Sep 2026",
-    stage: "Week 1",
-    progress: 55,
-    buddy: "Ama Darko",
-    checklist: [
-      { task: "Offer letter signed",          done: true,  category: "Pre-arrival" },
-      { task: "Right to work documents",       done: true,  category: "Pre-arrival" },
-      { task: "IT setup request submitted",    done: true,  category: "Pre-arrival" },
-      { task: "Desk & access card arranged",   done: true,  category: "Pre-arrival" },
-      { task: "Orientation meeting scheduled", done: true,  category: "Week 1" },
-      { task: "Introduction to team",          done: true,  category: "Week 1" },
-      { task: "System access confirmed",       done: false, category: "Week 1" },
-      { task: "HR induction completed",        done: false, category: "Week 1" },
-      { task: "First matter assigned",         done: false, category: "Month 1" },
-      { task: "30-day check-in",               done: false, category: "Month 1" },
-    ],
-  },
-  {
-    id: "ONB-2026-005",
-    name: "Efua Agyeman",
-    role: "HR Officer",
-    dept: "Human Resources",
-    startDate: "01 Sep 2026",
-    stage: "Month 1",
-    progress: 80,
-    buddy: "Yaa Bonsu",
-    checklist: [
-      { task: "Offer letter signed",          done: true,  category: "Pre-arrival" },
-      { task: "Right to work documents",       done: true,  category: "Pre-arrival" },
-      { task: "IT setup request submitted",    done: true,  category: "Pre-arrival" },
-      { task: "Desk & access card arranged",   done: true,  category: "Pre-arrival" },
-      { task: "Orientation meeting scheduled", done: true,  category: "Week 1" },
-      { task: "Introduction to team",          done: true,  category: "Week 1" },
-      { task: "System access confirmed",       done: true,  category: "Week 1" },
-      { task: "HR induction completed",        done: true,  category: "Week 1" },
-      { task: "First matter assigned",         done: false, category: "Month 1" },
-      { task: "30-day check-in",               done: false, category: "Month 1" },
-    ],
-  },
-  {
-    id: "ONB-2026-004",
-    name: "Nana Frimpong",
-    role: "IT Support Specialist",
-    dept: "IT",
-    startDate: "18 Aug 2026",
-    stage: "Completed",
-    progress: 100,
-    buddy: "Nana Acheampong",
-    checklist: [
-      { task: "Offer letter signed",          done: true, category: "Pre-arrival" },
-      { task: "Right to work documents",       done: true, category: "Pre-arrival" },
-      { task: "IT setup request submitted",    done: true, category: "Pre-arrival" },
-      { task: "Desk & access card arranged",   done: true, category: "Pre-arrival" },
-      { task: "Orientation meeting scheduled", done: true, category: "Week 1" },
-      { task: "Introduction to team",          done: true, category: "Week 1" },
-      { task: "System access confirmed",       done: true, category: "Week 1" },
-      { task: "HR induction completed",        done: true, category: "Week 1" },
-      { task: "First matter assigned",         done: true, category: "Month 1" },
-      { task: "30-day check-in",               done: true, category: "Month 1" },
-    ],
-  },
-];
 
 const STAGE_STYLE: Record<string, { bg: string; text: string }> = {
   "Pre-arrival": { bg: "#EFF4FF", text: "#1d4ed8" },
@@ -104,22 +16,74 @@ const STAGE_STYLE: Record<string, { bg: string; text: string }> = {
   "Completed":   { bg: "#ECFDF5", text: "#059669" },
 };
 
-type Onboardee = typeof ONBOARDEES[number];
+type Onboardee = NonNullable<ReturnType<typeof useQuery<typeof api.onboardees.list>>>[number];
 
 export default function OnboardingPage() {
-  const [filter, setFilter] = useState("All");
-  const [selected, setSelected] = useState<Onboardee | null>(null);
-  const [showAdd, setShowAdd] = useState(false);
-  const [added, setAdded] = useState(false);
-  const [form, setForm] = useState({ name: "", role: "", dept: "", startDate: "", buddy: "" });
-  const [confirmComplete, setConfirmComplete] = useState(false);
+  const onboardees    = useQuery(api.onboardees.list) ?? [];
+  const createHire    = useMutation(api.onboardees.create);
+  const toggleTask    = useMutation(api.onboardees.toggleTask);
+  const markComplete  = useMutation(api.onboardees.markComplete);
 
-  const filtered = ONBOARDEES.filter((o) => filter === "All" || o.stage === filter);
+  const [filter,           setFilter]           = useState("All");
+  const [selected,         setSelected]         = useState<Onboardee | null>(null);
+  const [showAdd,          setShowAdd]          = useState(false);
+  const [added,            setAdded]            = useState(false);
+  const [adding,           setAdding]           = useState(false);
+  const [confirmComplete,  setConfirmComplete]  = useState(false);
+  const [completing,       setCompleting]       = useState(false);
+  const [togglingIndex,    setTogglingIndex]    = useState<number | null>(null);
+  const [form,             setForm]             = useState({ name: "", role: "", dept: "", startDate: "", buddy: "" });
 
-  const totalActive    = ONBOARDEES.filter((o) => o.stage !== "Completed").length;
-  const completedCount = ONBOARDEES.filter((o) => o.stage === "Completed").length;
-  const preArrival     = ONBOARDEES.filter((o) => o.stage === "Pre-arrival").length;
-  const avgProgress    = Math.round(ONBOARDEES.reduce((a, o) => a + o.progress, 0) / ONBOARDEES.length);
+  const filtered       = onboardees.filter((o) => filter === "All" || o.stage === filter);
+  const totalActive    = onboardees.filter((o) => o.stage !== "Completed").length;
+  const completedCount = onboardees.filter((o) => o.stage === "Completed").length;
+  const preArrival     = onboardees.filter((o) => o.stage === "Pre-arrival").length;
+  const avgProgress    = onboardees.length > 0
+    ? Math.round(onboardees.reduce((a, o) => a + o.progress, 0) / onboardees.length)
+    : 0;
+
+  // Keep the detail panel in sync — use live data from the query
+  const liveSelected = selected
+    ? (onboardees.find((o) => o._id === selected._id) ?? selected)
+    : null;
+
+  async function handleAdd() {
+    if (!form.name || !form.role || !form.dept || !form.startDate) return;
+    setAdding(true);
+    try {
+      await createHire({
+        name:      form.name,
+        role:      form.role,
+        dept:      form.dept,
+        startDate: form.startDate,
+        buddy:     form.buddy || undefined,
+      });
+      setAdded(true);
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  async function handleToggle(id: Id<"onboardees">, taskIndex: number) {
+    setTogglingIndex(taskIndex);
+    try {
+      await toggleTask({ id, taskIndex });
+    } finally {
+      setTogglingIndex(null);
+    }
+  }
+
+  async function handleMarkComplete() {
+    if (!liveSelected) return;
+    setCompleting(true);
+    try {
+      await markComplete({ id: liveSelected._id as Id<"onboardees"> });
+      setSelected(null);
+      setConfirmComplete(false);
+    } finally {
+      setCompleting(false);
+    }
+  }
 
   return (
     <div className="space-y-5 max-w-[1200px]">
@@ -130,7 +94,7 @@ export default function OnboardingPage() {
           <p className="text-[12px] text-[#94A3B8] mt-0.5">Track new hire onboarding progress</p>
         </div>
         <button
-          onClick={() => { setShowAdd(true); setAdded(false); }}
+          onClick={() => { setShowAdd(true); setAdded(false); setForm({ name: "", role: "", dept: "", startDate: "", buddy: "" }); }}
           className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-[13px] font-semibold text-white hover:opacity-90 transition-opacity"
           style={{ background: "#0B2349" }}
         >
@@ -142,10 +106,10 @@ export default function OnboardingPage() {
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: "Active Onboarding", value: String(totalActive),    icon: "users" as const,       color: "#0B2349", bg: "#EFF4FF" },
-          { label: "Pre-arrival",        value: String(preArrival),     icon: "clock" as const,       color: "#1d4ed8", bg: "#EFF4FF" },
+          { label: "Active Onboarding", value: String(totalActive),    icon: "users" as const,        color: "#0B2349", bg: "#EFF4FF" },
+          { label: "Pre-arrival",        value: String(preArrival),     icon: "clock" as const,        color: "#1d4ed8", bg: "#EFF4FF" },
           { label: "Completed",          value: String(completedCount), icon: "check-circle" as const, color: "#059669", bg: "#ECFDF5" },
-          { label: "Avg Progress",       value: `${avgProgress}%`,      icon: "bar-chart" as const,   color: "#7C3AED", bg: "#F5F3FF" },
+          { label: "Avg Progress",       value: `${avgProgress}%`,      icon: "bar-chart" as const,    color: "#7C3AED", bg: "#F5F3FF" },
         ].map((k) => (
           <div key={k.label} className="bg-white rounded-xl p-4" style={{ border: "1px solid #F1F5F9", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
             <div className="flex items-center justify-between mb-3">
@@ -176,7 +140,7 @@ export default function OnboardingPage() {
           const ss = STAGE_STYLE[o.stage];
           const done = o.checklist.filter((c) => c.done).length;
           return (
-            <div key={o.id} className="bg-white rounded-xl p-4 cursor-pointer hover:shadow-md transition-shadow" style={{ border: "1px solid #F1F5F9", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}
+            <div key={o._id} className="bg-white rounded-xl p-4 cursor-pointer hover:shadow-md transition-shadow" style={{ border: "1px solid #F1F5F9", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}
               onClick={() => setSelected(o)}>
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
@@ -202,46 +166,60 @@ export default function OnboardingPage() {
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-[11px] text-[#94A3B8]">Buddy: <span className="text-[#64748B] font-medium">{o.buddy}</span></span>
+                <span className="text-[11px] text-[#94A3B8]">Buddy: <span className="text-[#64748B] font-medium">{o.buddy ?? "—"}</span></span>
                 <span className="text-[11px] font-semibold" style={{ color: "#0B2349" }}>{o.progress}%</span>
               </div>
             </div>
           );
         })}
+        {filtered.length === 0 && (
+          <div className="col-span-2 py-16 text-center text-[12px] text-[#94A3B8]">No onboardees found.</div>
+        )}
       </div>
 
       {/* Detail modal */}
-      <Modal isOpen={!!selected} onClose={() => setSelected(null)} title={selected ? `${selected.name} — Onboarding` : ""} maxWidth="560px">
-        {selected && (
+      <Modal isOpen={!!liveSelected} onClose={() => setSelected(null)} title={liveSelected ? `${liveSelected.name} — Onboarding` : ""} maxWidth="560px">
+        {liveSelected && (
           <div className="space-y-4">
             <div className="flex items-center gap-3 pb-3 border-b border-[#F1F5F9]">
               <div className="w-10 h-10 rounded-full flex items-center justify-center text-[12px] font-bold" style={{ background: "#EFF4FF", color: "#0B2349" }}>
-                {selected.name.split(" ").map((w) => w[0]).join("")}
+                {liveSelected.name.split(" ").map((w) => w[0]).join("")}
               </div>
               <div>
-                <p className="font-semibold text-[#1e293b]">{selected.name}</p>
-                <p className="text-[12px] text-[#64748B]">{selected.role} · {selected.dept}</p>
+                <p className="font-semibold text-[#1e293b]">{liveSelected.name}</p>
+                <p className="text-[12px] text-[#64748B]">{liveSelected.role} · {liveSelected.dept}</p>
               </div>
-              <span className="ml-auto rounded-full px-2.5 py-0.5 text-[11px] font-semibold" style={{ background: STAGE_STYLE[selected.stage].bg, color: STAGE_STYLE[selected.stage].text }}>{selected.stage}</span>
+              <span className="ml-auto rounded-full px-2.5 py-0.5 text-[11px] font-semibold" style={{ background: STAGE_STYLE[liveSelected.stage].bg, color: STAGE_STYLE[liveSelected.stage].text }}>{liveSelected.stage}</span>
             </div>
 
             {["Pre-arrival", "Week 1", "Month 1"].map((cat) => (
               <div key={cat}>
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-[#94A3B8] mb-2">{cat}</p>
                 <div className="space-y-1.5">
-                  {selected.checklist.filter((c) => c.category === cat).map((c, i) => (
-                    <div key={i} className="flex items-center gap-2.5 rounded-lg px-3 py-2" style={{ background: c.done ? "#ECFDF5" : "#F8FAFC" }}>
-                      <div className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0" style={{ background: c.done ? "#059669" : "#E2E8F0" }}>
-                        {c.done && <Icon name="check" className="w-2.5 h-2.5 text-white" strokeWidth={3} />}
-                      </div>
-                      <span className="text-[12px]" style={{ color: c.done ? "#059669" : "#64748B" }}>{c.task}</span>
-                    </div>
-                  ))}
+                  {liveSelected.checklist.map((c, i) => {
+                    if (c.category !== cat) return null;
+                    const isToggling = togglingIndex === i;
+                    return (
+                      <button
+                        key={i}
+                        onClick={() => handleToggle(liveSelected._id as Id<"onboardees">, i)}
+                        disabled={isToggling}
+                        className="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-left transition-colors hover:opacity-80"
+                        style={{ background: c.done ? "#ECFDF5" : "#F8FAFC" }}
+                      >
+                        <div className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0 transition-colors" style={{ background: c.done ? "#059669" : "#E2E8F0" }}>
+                          {c.done && <Icon name="check" className="w-2.5 h-2.5 text-white" strokeWidth={3} />}
+                          {isToggling && <span className="w-2 h-2 rounded-full border border-current animate-spin" />}
+                        </div>
+                        <span className="text-[12px]" style={{ color: c.done ? "#059669" : "#64748B" }}>{c.task}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             ))}
 
-            {selected.stage !== "Completed" && (
+            {liveSelected.stage !== "Completed" && (
               <div className="pt-2">
                 <button
                   onClick={() => setConfirmComplete(true)}
@@ -292,7 +270,7 @@ export default function OnboardingPage() {
                 </select>
               </FormField>
             </div>
-            <ModalFooter onClose={() => setShowAdd(false)} confirmLabel="Add New Hire" onConfirm={() => { if (form.name && form.role && form.dept && form.startDate) setAdded(true); }} />
+            <ModalFooter onClose={() => setShowAdd(false)} confirmLabel={adding ? "Adding…" : "Add New Hire"} onConfirm={handleAdd} />
           </div>
         )}
       </Modal>
@@ -300,10 +278,10 @@ export default function OnboardingPage() {
       <ConfirmDialog
         isOpen={confirmComplete}
         onClose={() => setConfirmComplete(false)}
-        onConfirm={() => { setSelected(null); setConfirmComplete(false); }}
+        onConfirm={handleMarkComplete}
         title="Mark as completed?"
-        message={`Mark ${selected?.name}'s onboarding as complete? All remaining tasks will be checked off.`}
-        confirmLabel="Mark Complete"
+        message={`Mark ${liveSelected?.name}'s onboarding as complete? All remaining tasks will be checked off.`}
+        confirmLabel={completing ? "Completing…" : "Mark Complete"}
         variant="success"
       />
     </div>

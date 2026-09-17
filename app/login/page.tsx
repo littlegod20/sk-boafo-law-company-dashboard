@@ -5,15 +5,15 @@ import { useRouter } from "next/navigation";
 import { useAuthActions } from "@convex-dev/auth/react";
 
 const DEMO_USERS = [
-  { email: "sk.boafo@skboafo.gh",     password: "Chambers2026",  name: "S.K. Boafo",       role: "Managing Partner" },
-  { email: "k.asare@skboafo.gh",      password: "Chambers2026",  name: "Kwabena Asare",    role: "Partner" },
-  { email: "k.frimpong@skboafo.gh",   password: "Chambers2026",  name: "Kojo Frimpong",    role: "Partner" },
-  { email: "k.mensah@skboafo.gh",     password: "Associate2026", name: "Kofi Mensah",      role: "Associate" },
-  { email: "a.asante@skboafo.gh",     password: "Associate2026", name: "Abena Asante",     role: "Associate" },
-  { email: "a.darko@skboafo.gh",      password: "Paralegal2026", name: "Ama Darko",        role: "Paralegal" },
-  { email: "a.twum@skboafo.gh",       password: "Paralegal2026", name: "Akua Twum",        role: "Paralegal" },
-  { email: "n.acheampong@skboafo.gh", password: "Admin2026",     name: "Nana Acheampong",  role: "Admin" },
-  { email: "y.bonsu@skboafo.gh",      password: "HROfficer2026", name: "Yaa Bonsu",        role: "HR Officer" },
+  { email: "sk.boafo@skboafo.gh",     password: "SKBoafo@2026", name: "S.K. Boafo",       role: "Managing Partner" },
+  { email: "k.asare@skboafo.gh",      password: "Demo@2026!",   name: "Kwabena Asare",    role: "Partner" },
+  { email: "k.frimpong@skboafo.gh",   password: "Demo@2026!",   name: "Kojo Frimpong",    role: "Partner" },
+  { email: "k.mensah@skboafo.gh",     password: "Demo@2026!",   name: "Kofi Mensah",      role: "Associate" },
+  { email: "a.asante@skboafo.gh",     password: "Demo@2026!",   name: "Abena Asante",     role: "Associate" },
+  { email: "a.darko@skboafo.gh",      password: "Demo@2026!",   name: "Ama Darko",        role: "Paralegal" },
+  { email: "a.twum@skboafo.gh",       password: "Demo@2026!",   name: "Akua Twum",        role: "Paralegal" },
+  { email: "n.acheampong@skboafo.gh", password: "Demo@2026!",   name: "Nana Acheampong",  role: "Admin" },
+  { email: "y.bonsu@skboafo.gh",      password: "Demo@2026!",   name: "Yaa Bonsu",        role: "HR Officer" },
 ];
 
 export default function LoginPage() {

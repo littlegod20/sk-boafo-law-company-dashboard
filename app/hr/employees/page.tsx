@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { Icon } from "@/components/Icons";
 import { Pagination, BulkToolbar, TBtn, Checkbox } from "@/components/TableControls";
-import { useQuery } from "convex/react";
+import { Modal, FormField, ModalFooter, inputCls } from "@/components/Modal";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 
 const PAGE_SIZE = 8;
 
@@ -16,6 +18,8 @@ const ROLE_LABELS: Record<string, string> = {
   admin:            "Admin",
   hr_officer:       "HR Officer",
 };
+
+const ROLE_KEYS = Object.keys(ROLE_LABELS) as Array<keyof typeof ROLE_LABELS>;
 
 const AVATAR_PALETTE = [
   { bg: "#EFF4FF", color: "#1d4ed8" }, { bg: "#ECFDF5", color: "#059669" },
@@ -29,27 +33,45 @@ const STATUS_STYLE: Record<string, { bg: string; text: string }> = {
   Inactive:   { bg: "#F1F5F9", text: "#64748B" },
 };
 
-export default function EmployeesPage() {
-  // ── Convex ──────────────────────────────────────────────────────────────────
-  const rawUsers = useQuery(api.users.list) ?? [];
+type RawUser = NonNullable<ReturnType<typeof useQuery<typeof api.users.list>>>[number];
 
-  // Map to display shape
+interface EditForm {
+  name:       string;
+  workPhone:  string;
+  dept:       string;
+  role:       string;
+  isActive:   boolean;
+  joinedDate: string;
+  barNumber:  string;
+}
+
+export default function EmployeesPage() {
+  const rawUsers  = useQuery(api.users.list) ?? [];
+  const updateFn  = useMutation(api.users.update);
+
   const employees = rawUsers.map((u) => ({
-    _id:    u._id,
-    empId:  u.employeeId ?? u._id.toString().slice(-6).toUpperCase(),
-    name:   u.name ?? u.email ?? "Unknown",
-    role:   ROLE_LABELS[u.role ?? "associate"] ?? u.role ?? "Staff",
-    dept:   u.dept ?? "—",
-    email:  u.email ?? "—",
-    phone:  u.workPhone ?? "—",
-    joined: u.joinedDate ?? "—",
-    status: u.isActive === false ? "Inactive" : "Active",
+    _id:        u._id,
+    empId:      u.employeeId ?? u._id.toString().slice(-6).toUpperCase(),
+    name:       u.name ?? u.email ?? "Unknown",
+    role:       ROLE_LABELS[u.role ?? "associate"] ?? u.role ?? "Staff",
+    roleKey:    u.role ?? "associate",
+    dept:       u.dept ?? "—",
+    email:      u.email ?? "—",
+    phone:      u.workPhone ?? "—",
+    joined:     u.joinedDate ?? "—",
+    barNumber:  u.barNumber ?? "",
+    status:     u.isActive === false ? "Inactive" : "Active",
+    isActive:   u.isActive !== false,
+    _raw:       u,
   }));
 
-  // ── State ────────────────────────────────────────────────────────────────────
-  const [page,     setPage]     = useState(1);
-  const [search,   setSearch]   = useState("");
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [page,       setPage]       = useState(1);
+  const [search,     setSearch]     = useState("");
+  const [selected,   setSelected]   = useState<Set<string>>(new Set());
+  const [editTarget, setEditTarget] = useState<typeof employees[number] | null>(null);
+  const [form,       setForm]       = useState<EditForm>({ name: "", workPhone: "", dept: "", role: "associate", isActive: true, joinedDate: "", barNumber: "" });
+  const [saving,     setSaving]     = useState(false);
+  const [saved,      setSaved]      = useState(false);
 
   const filtered  = employees.filter((e) =>
     !search || e.name.toLowerCase().includes(search.toLowerCase()) || e.dept.toLowerCase().includes(search.toLowerCase())
@@ -68,6 +90,40 @@ export default function EmployeesPage() {
     });
   }
 
+  function openEdit(emp: typeof employees[number]) {
+    setEditTarget(emp);
+    setForm({
+      name:       emp.name,
+      workPhone:  emp.phone === "—" ? "" : emp.phone,
+      dept:       emp.dept === "—" ? "" : emp.dept,
+      role:       emp.roleKey,
+      isActive:   emp.isActive,
+      joinedDate: emp.joined === "—" ? "" : emp.joined,
+      barNumber:  emp.barNumber,
+    });
+    setSaved(false);
+  }
+
+  async function handleSave() {
+    if (!editTarget) return;
+    setSaving(true);
+    try {
+      await updateFn({
+        id:         editTarget._id as Id<"users">,
+        name:       form.name || undefined,
+        workPhone:  form.workPhone || undefined,
+        dept:       form.dept || undefined,
+        role:       form.role as any,
+        isActive:   form.isActive,
+        joinedDate: form.joinedDate || undefined,
+        barNumber:  form.barNumber || undefined,
+      });
+      setSaved(true);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <div className="space-y-5 max-w-[1200px]">
       <div className="flex items-center justify-between">
@@ -77,12 +133,6 @@ export default function EmployeesPage() {
             {employees.length} staff members · {employees.filter((e) => e.status === "Active").length} active
           </p>
         </div>
-        <button
-          className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-[13px] font-semibold text-white hover:opacity-90 transition-opacity"
-          style={{ background: "#0B2349" }}
-        >
-          <Icon name="plus" className="w-4 h-4" strokeWidth={2.5} /> Add Employee
-        </button>
       </div>
 
       {/* Search */}
@@ -149,7 +199,10 @@ export default function EmployeesPage() {
                     </span>
                   </td>
                   <td className="px-3 py-3.5">
-                    <button className="p-1.5 rounded-lg hover:bg-[#F1F5F9] transition-colors text-[#94A3B8]">
+                    <button
+                      onClick={() => openEdit(e)}
+                      className="p-1.5 rounded-lg hover:bg-[#F1F5F9] transition-colors text-[#94A3B8] hover:text-[#0B2349]"
+                    >
                       <Icon name="eye" className="w-4 h-4" strokeWidth={1.75} />
                     </button>
                   </td>
@@ -167,6 +220,80 @@ export default function EmployeesPage() {
         </table>
         <Pagination page={page} total={filtered.length} pageSize={PAGE_SIZE} onChange={(p) => { setPage(p); setSelected(new Set()); }} />
       </div>
+
+      {/* Edit Employee Modal */}
+      <Modal isOpen={!!editTarget} onClose={() => setEditTarget(null)} title="Edit Employee" maxWidth="520px">
+        {editTarget && (
+          saved ? (
+            <div className="text-center py-6">
+              <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3" style={{ background: "#ECFDF5" }}>
+                <Icon name="check-circle" className="w-6 h-6" style={{ color: "#059669" }} />
+              </div>
+              <p className="font-semibold text-[#1e293b]">Changes saved</p>
+              <p className="text-[13px] text-[#94A3B8] mt-1">Employee profile has been updated.</p>
+              <button className="mt-4 rounded-lg px-4 py-2 text-[13px] font-medium text-white" style={{ background: "#0B2349" }} onClick={() => setEditTarget(null)}>Done</button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* Identity */}
+              <div className="flex items-center gap-3 pb-3 border-b border-[#F1F5F9]">
+                <div className="w-10 h-10 rounded-full flex items-center justify-center text-[12px] font-bold" style={{ background: "#EFF4FF", color: "#0B2349" }}>
+                  {editTarget.name.split(" ").map((w) => w[0]).slice(0, 2).join("")}
+                </div>
+                <div>
+                  <p className="font-semibold text-[#1e293b] text-[13px]">{editTarget.name}</p>
+                  <p className="text-[11px] text-[#94A3B8]">{editTarget.email} · {editTarget.empId}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField label="Full Name" required>
+                  <input className={inputCls} value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+                </FormField>
+                <FormField label="Work Phone">
+                  <input className={inputCls} value={form.workPhone} onChange={(e) => setForm((f) => ({ ...f, workPhone: e.target.value }))} />
+                </FormField>
+                <FormField label="Department">
+                  <input className={inputCls} value={form.dept} onChange={(e) => setForm((f) => ({ ...f, dept: e.target.value }))} />
+                </FormField>
+                <FormField label="Role">
+                  <select className={inputCls} value={form.role} onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}>
+                    {ROLE_KEYS.map((k) => <option key={k} value={k}>{ROLE_LABELS[k]}</option>)}
+                  </select>
+                </FormField>
+                <FormField label="Date Joined">
+                  <input className={inputCls} placeholder="e.g. Jan 2020" value={form.joinedDate} onChange={(e) => setForm((f) => ({ ...f, joinedDate: e.target.value }))} />
+                </FormField>
+                <FormField label="Bar Number">
+                  <input className={inputCls} placeholder="e.g. GHA-BAR-2020-0201" value={form.barNumber} onChange={(e) => setForm((f) => ({ ...f, barNumber: e.target.value }))} />
+                </FormField>
+              </div>
+
+              {/* Active toggle */}
+              <div className="flex items-center justify-between rounded-lg px-3 py-2.5 bg-[#F8FAFC]">
+                <span className="text-[13px] text-[#1e293b] font-medium">Active employee</span>
+                <button
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, isActive: !f.isActive }))}
+                  className="relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200"
+                  style={{ background: form.isActive ? "#0B2349" : "#CBD5E1" }}
+                >
+                  <span
+                    className="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200"
+                    style={{ transform: form.isActive ? "translateX(16px)" : "translateX(0)" }}
+                  />
+                </button>
+              </div>
+
+              <ModalFooter
+                onClose={() => setEditTarget(null)}
+                confirmLabel={saving ? "Saving…" : "Save Changes"}
+                onConfirm={handleSave}
+              />
+            </div>
+          )
+        )}
+      </Modal>
     </div>
   );
 }

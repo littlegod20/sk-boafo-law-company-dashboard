@@ -1,6 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { Icon } from "@/components/Icons";
+import { Pagination } from "@/components/TableControls";
+
+const PAGE_SIZE = 8;
 
 const TODAY = [
   { name: "S.K. Boafo",      role: "Managing Partner", in: "08:02",  out: "—",     status: "Present" },
@@ -36,6 +40,9 @@ const absent   = TODAY.filter((r) => r.status === "Absent").length;
 const onLeave  = TODAY.filter((r) => r.status === "On Leave").length;
 
 export default function HRAttendancePage() {
+  const [page, setPage] = useState(1);
+  const paginated = TODAY.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
   return (
     <div className="space-y-5 max-w-[1100px]">
       <div>
@@ -78,8 +85,9 @@ export default function HRAttendancePage() {
             </tr>
           </thead>
           <tbody>
-            {TODAY.map((r, i) => {
-              const av = AVATAR_PALETTE[i % AVATAR_PALETTE.length];
+            {paginated.map((r, i) => {
+              const globalIdx = (page - 1) * PAGE_SIZE + i;
+              const av = AVATAR_PALETTE[globalIdx % AVATAR_PALETTE.length];
               return (
                 <tr key={r.name} className="border-t border-[#F8FAFC] hover:bg-[#FAFBFC] transition-colors">
                   <td className="px-5 py-3.5">
@@ -103,6 +111,7 @@ export default function HRAttendancePage() {
             })}
           </tbody>
         </table>
+        <Pagination page={page} total={TODAY.length} pageSize={PAGE_SIZE} onChange={setPage} />
       </div>
     </div>
   );
