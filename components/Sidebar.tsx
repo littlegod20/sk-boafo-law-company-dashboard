@@ -85,9 +85,13 @@ const HR_PROJECTS = [
 ];
 
 const HR_SECTION = [
-  { href: "/hr/leave",      label: "Leave register", icon: "calendar" as const },
-  { href: "/hr/employees",  label: "Employees",      icon: "users" as const },
-  { href: "/hr/attendance", label: "Attendance",     icon: "clock" as const },
+  { href: "/hr/leave",          label: "Leave register",  icon: "calendar" as const },
+  { href: "/hr/employees",      label: "Employees",       icon: "users" as const },
+  { href: "/hr/attendance",     label: "Attendance",      icon: "clock" as const },
+  { href: "/hr/recruitment",    label: "Recruitment",     icon: "briefcase" as const },
+  { href: "/hr/onboarding",     label: "Onboarding",      icon: "check-circle" as const },
+  { href: "/hr/exit-clearance", label: "Exit clearance",  icon: "log-out" as const },
+  { href: "/hr/expense-claims", label: "Expense claims",  icon: "receipt" as const },
 ];
 
 const ROLES = [
