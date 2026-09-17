@@ -422,7 +422,6 @@ export default function BillingPage() {
         title="Send Reminders"
         message={`Send payment reminders for ${selected.size} invoice${selected.size !== 1 ? "s" : ""}?`}
         confirmLabel="Send Reminder"
-        variant="default"
       />
 
       {/* Confirm: Void */}
