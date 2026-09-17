@@ -115,7 +115,7 @@ export default function ExpenseClaimsPage() {
         {[
           { label: "Total Claims",      value: String(totalClaims),  icon: "receipt" as const,      color: "#0B2349", bg: "#EFF4FF" },
           { label: "Pending Approval",  value: String(pendingCount), icon: "clock" as const,        color: "#D97706", bg: "#FFFBEB" },
-          { label: "Pending Amount",    value: fmt(pendingAmount),   icon: "dollar-sign" as const,  color: "#DC2626", bg: "#FFF5F5" },
+          { label: "Pending Amount",    value: fmt(pendingAmount),   icon: "dollar" as const,       color: "#DC2626", bg: "#FFF5F5" },
           { label: "Approved YTD",      value: fmt(approvedAmount),  icon: "check-circle" as const, color: "#059669", bg: "#ECFDF5" },
         ].map((k) => (
           <div key={k.label} className="bg-white rounded-xl p-4" style={{ border: "1px solid #F1F5F9", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
@@ -247,7 +247,7 @@ export default function ExpenseClaimsPage() {
               <textarea className={`${inputCls} resize-none`} rows={3} placeholder="Brief description of the expense…" value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} />
             </FormField>
             <div className="rounded-xl p-3 flex items-center gap-3" style={{ background: "#FFFBEB", border: "1px solid #FDE68A" }}>
-              <Icon name="alert-triangle" className="w-4 h-4 flex-shrink-0" style={{ color: "#D97706" }} />
+              <Icon name="alert" className="w-4 h-4 flex-shrink-0" style={{ color: "#D97706" }} />
               <p className="text-[12px] text-[#92400E]">Please attach your receipt before submitting. Claims without receipts may be declined.</p>
             </div>
             <ModalFooter onClose={() => setShowNew(false)} confirmLabel="Submit Claim" onConfirm={() => { if (form.category && form.amount && form.date && form.description) setSubmitted(true); }} />

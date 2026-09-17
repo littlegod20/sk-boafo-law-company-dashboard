@@ -4,21 +4,11 @@ import { useState } from "react";
 import { Icon } from "@/components/Icons";
 import { ConfirmDialog } from "@/components/Modal";
 import { Pagination, BulkToolbar, TBtn, Checkbox } from "@/components/TableControls";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 
 const PAGE_SIZE = 8;
-
-const REQUESTS = [
-  { id: "LV-2026-015", employee: "Yaa Bonsu",     role: "HR Officer",    type: "Annual Leave",    from: "22 Sep 2026", to: "26 Sep 2026", days: 5, status: "Pending",  applied: "15 Sep 2026" },
-  { id: "LV-2026-014", employee: "Kofi Mensah",   role: "Associate",     type: "Sick Leave",      from: "17 Sep 2026", to: "17 Sep 2026", days: 1, status: "Pending",  applied: "16 Sep 2026" },
-  { id: "LV-2026-013", employee: "Ama Darko",     role: "Paralegal",     type: "Emergency Leave", from: "18 Sep 2026", to: "19 Sep 2026", days: 2, status: "Pending",  applied: "16 Sep 2026" },
-  { id: "LV-2026-012", employee: "Kwame Osei",    role: "Associate",     type: "Annual Leave",    from: "02 Sep 2026", to: "04 Sep 2026", days: 3, status: "Approved", applied: "28 Aug 2026" },
-  { id: "LV-2026-011", employee: "Abena Asante",  role: "Admin",         type: "Annual Leave",    from: "25 Aug 2026", to: "29 Aug 2026", days: 5, status: "Approved", applied: "20 Aug 2026" },
-  { id: "LV-2026-010", employee: "Kojo Frimpong", role: "Partner",       type: "Study Leave",     from: "18 Aug 2026", to: "22 Aug 2026", days: 5, status: "Approved", applied: "12 Aug 2026" },
-  { id: "LV-2026-009", employee: "Efua Agyeman",  role: "Associate",     type: "Maternity Leave", from: "01 Aug 2026", to: "31 Oct 2026", days: 91, status: "Approved",applied: "15 Jul 2026" },
-  { id: "LV-2026-008", employee: "Yaa Bonsu",     role: "HR Officer",    type: "Sick Leave",      from: "20 Aug 2026", to: "20 Aug 2026", days: 1, status: "Approved", applied: "19 Aug 2026" },
-  { id: "LV-2026-007", employee: "Kofi Mensah",   role: "Associate",     type: "Annual Leave",    from: "05 Aug 2026", to: "07 Aug 2026", days: 3, status: "Declined", applied: "01 Aug 2026" },
-  { id: "LV-2026-006", employee: "Ama Darko",     role: "Paralegal",     type: "Annual Leave",    from: "28 Jul 2026", to: "01 Aug 2026", days: 5, status: "Approved", applied: "22 Jul 2026" },
-];
 
 const STATUS_STYLE: Record<string, { bg: string; text: string }> = {
   Approved: { bg: "#ECFDF5", text: "#059669" },
@@ -29,24 +19,29 @@ const STATUS_STYLE: Record<string, { bg: string; text: string }> = {
 const FILTER_OPTIONS = ["All", "Pending", "Approved", "Declined"];
 
 export default function HRLeavePage() {
-  const [requests, setRequests] = useState(REQUESTS);
-  const [filter, setFilter] = useState("All");
-  const [page, setPage] = useState(1);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [confirmApprove, setConfirmApprove] = useState(false);
-  const [confirmDecline, setConfirmDecline] = useState(false);
+  // ── Convex ──────────────────────────────────────────────────────────────────
+  const requests    = useQuery(api.leave.listAll) ?? [];
+  const approveFn   = useMutation(api.leave.approve);
+  const declineFn   = useMutation(api.leave.decline);
 
-  const filtered = requests.filter((r) => filter === "All" || r.status === filter);
+  // ── State ────────────────────────────────────────────────────────────────────
+  const [filter,          setFilter]          = useState("All");
+  const [page,            setPage]            = useState(1);
+  const [selected,        setSelected]        = useState<Set<string>>(new Set());
+  const [confirmApprove,  setConfirmApprove]  = useState(false);
+  const [confirmDecline,  setConfirmDecline]  = useState(false);
+
+  const filtered  = requests.filter((r) => filter === "All" || r.status === filter);
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  const pageIds = paginated.map((r) => r.id);
-  const allPageSelected = pageIds.length > 0 && pageIds.every((id) => selected.has(id));
+  const pageIds   = paginated.map((r) => r._id as string);
+  const allPageSelected  = pageIds.length > 0 && pageIds.every((id) => selected.has(id));
   const somePageSelected = pageIds.some((id) => selected.has(id));
 
   function toggleAll() {
     setSelected((prev) => {
       const next = new Set(prev);
       if (allPageSelected) { pageIds.forEach((id) => next.delete(id)); }
-      else { pageIds.forEach((id) => next.add(id)); }
+      else                  { pageIds.forEach((id) => next.add(id)); }
       return next;
     });
   }
@@ -59,14 +54,20 @@ export default function HRLeavePage() {
     });
   }
 
-  function handleApprove() {
-    setRequests((prev) => prev.map((r) => selected.has(r.id) ? { ...r, status: "Approved" } : r));
-    setSelected(new Set()); setConfirmApprove(false);
+  function getSelectedIds(): Id<"leaveRequests">[] {
+    return requests.filter((r) => selected.has(r._id as string)).map((r) => r._id);
   }
 
-  function handleDecline() {
-    setRequests((prev) => prev.map((r) => selected.has(r.id) ? { ...r, status: "Declined" } : r));
-    setSelected(new Set()); setConfirmDecline(false);
+  async function handleApprove() {
+    await approveFn({ ids: getSelectedIds() });
+    setSelected(new Set());
+    setConfirmApprove(false);
+  }
+
+  async function handleDecline() {
+    await declineFn({ ids: getSelectedIds() });
+    setSelected(new Set());
+    setConfirmDecline(false);
   }
 
   const pendingCount = requests.filter((r) => r.status === "Pending").length;
@@ -127,41 +128,63 @@ export default function HRLeavePage() {
             </tr>
           </thead>
           <tbody>
-            {paginated.map((r) => (
-              <tr key={r.id} className="border-t border-[#F8FAFC] hover:bg-[#FAFBFC] transition-colors" style={selected.has(r.id) ? { background: "#EFF4FF" } : {}}>
-                <td className="pl-5 pr-3 py-3.5">
-                  <Checkbox checked={selected.has(r.id)} onChange={() => toggleRow(r.id)} />
-                </td>
-                <td className="px-3 py-3.5">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0" style={{ background: "#EFF4FF", color: "#0B2349" }}>
-                      {r.employee.split(" ").map((w) => w[0]).join("")}
+            {paginated.map((r) => {
+              const rid = r._id as string;
+              return (
+                <tr key={rid} className="border-t border-[#F8FAFC] hover:bg-[#FAFBFC] transition-colors" style={selected.has(rid) ? { background: "#EFF4FF" } : {}}>
+                  <td className="pl-5 pr-3 py-3.5">
+                    <Checkbox checked={selected.has(rid)} onChange={() => toggleRow(rid)} />
+                  </td>
+                  <td className="px-3 py-3.5">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0" style={{ background: "#EFF4FF", color: "#0B2349" }}>
+                        {r.employeeName.split(" ").map((w) => w[0]).join("")}
+                      </div>
+                      <div>
+                        <p className="font-medium text-[#1e293b] leading-tight">{r.employeeName}</p>
+                        <p className="text-[10px] text-[#94A3B8]">{r.role}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium text-[#1e293b] leading-tight">{r.employee}</p>
-                      <p className="text-[10px] text-[#94A3B8]">{r.role}</p>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-3 py-3.5 text-[#1e293b]">{r.type}</td>
-                <td className="px-3 py-3.5 text-[#64748B] text-[12px]">{r.from} – {r.to}</td>
-                <td className="px-3 py-3.5 font-semibold text-[#0B2349]">{r.days}d</td>
-                <td className="px-3 py-3.5 text-[#64748B] text-[12px]">{r.applied}</td>
-                <td className="px-3 py-3.5">
-                  <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold" style={{ background: STATUS_STYLE[r.status].bg, color: STATUS_STYLE[r.status].text }}>
-                    {r.status}
-                  </span>
-                </td>
-                <td className="px-3 py-3.5">
-                  {r.status === "Pending" && (
-                    <div className="flex items-center gap-1">
-                      <button onClick={() => { setSelected(new Set([r.id])); setConfirmApprove(true); }} className="rounded-lg px-2.5 py-1 text-[11px] font-semibold" style={{ background: "#ECFDF5", color: "#059669" }}>Approve</button>
-                      <button onClick={() => { setSelected(new Set([r.id])); setConfirmDecline(true); }} className="rounded-lg px-2.5 py-1 text-[11px] font-semibold" style={{ background: "#FFF5F5", color: "#DC2626" }}>Decline</button>
-                    </div>
-                  )}
+                  </td>
+                  <td className="px-3 py-3.5 text-[#1e293b]">{r.type}</td>
+                  <td className="px-3 py-3.5 text-[#64748B] text-[12px]">{r.from} – {r.to}</td>
+                  <td className="px-3 py-3.5 font-semibold text-[#0B2349]">{r.days}d</td>
+                  <td className="px-3 py-3.5 text-[#64748B] text-[12px]">{r.appliedDate}</td>
+                  <td className="px-3 py-3.5">
+                    <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold" style={{ background: STATUS_STYLE[r.status].bg, color: STATUS_STYLE[r.status].text }}>
+                      {r.status}
+                    </span>
+                  </td>
+                  <td className="px-3 py-3.5">
+                    {r.status === "Pending" && (
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => { setSelected(new Set([rid])); setConfirmApprove(true); }}
+                          className="rounded-lg px-2.5 py-1 text-[11px] font-semibold"
+                          style={{ background: "#ECFDF5", color: "#059669" }}
+                        >
+                          Approve
+                        </button>
+                        <button
+                          onClick={() => { setSelected(new Set([rid])); setConfirmDecline(true); }}
+                          className="rounded-lg px-2.5 py-1 text-[11px] font-semibold"
+                          style={{ background: "#FFF5F5", color: "#DC2626" }}
+                        >
+                          Decline
+                        </button>
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+            {filtered.length === 0 && (
+              <tr>
+                <td colSpan={8} className="px-5 py-16 text-center text-[12px] text-[#94A3B8]">
+                  No leave requests found.
                 </td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
         <Pagination page={page} total={filtered.length} pageSize={PAGE_SIZE} onChange={(p) => { setPage(p); setSelected(new Set()); }} />

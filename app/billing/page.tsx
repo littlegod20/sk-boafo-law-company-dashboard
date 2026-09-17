@@ -4,96 +4,110 @@ import { useState, useEffect } from "react";
 import { Icon } from "@/components/Icons";
 import { Modal, ConfirmDialog, FormField, ModalFooter, inputCls } from "@/components/Modal";
 import { Pagination, BulkToolbar, TBtn, Checkbox } from "@/components/TableControls";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 
 const PAGE_SIZE = 6;
 
-const INITIAL_INVOICES = [
-  { id: "INV-2026-041", client: "Ghana Mining Co.", case: "SKB-2026-045", description: "Legal services — Aug 2026", amount: 12500, status: "Pending", issued: "01 Sep 2026", due: "01 Oct 2026", attorney: "E. Darko" },
-  { id: "INV-2026-040", client: "Ofori & Sons Ltd.", case: "SKB-2026-047", description: "Retainer — Q3 2026", amount: 8000, status: "Paid", issued: "01 Sep 2026", due: "15 Sep 2026", attorney: "A. Mensah" },
-  { id: "INV-2026-039", client: "Goldfields Minerals", case: "SKB-2026-039", description: "Consultation & filings — Aug", amount: 8200, status: "Paid", issued: "28 Aug 2026", due: "12 Sep 2026", attorney: "E. Darko" },
-  { id: "INV-2026-038", client: "Accra Realty Ltd.", case: "SKB-2026-043", description: "Conveyancing services", amount: 6800, status: "Overdue", issued: "15 Aug 2026", due: "05 Sep 2026", attorney: "D. Owusu" },
-  { id: "INV-2026-037", client: "TeleFlex Ghana", case: "SKB-2026-041", description: "Retainer — Aug 2026", amount: 9500, status: "Pending", issued: "01 Aug 2026", due: "20 Sep 2026", attorney: "E. Darko" },
-  { id: "INV-2026-036", client: "Adom Broadcasting", case: "SKB-2026-037", description: "Regulatory advisory", amount: 4200, status: "Overdue", issued: "01 Aug 2026", due: "25 Aug 2026", attorney: "A. Mensah" },
-  { id: "INV-2026-035", client: "Adwoa Boateng", case: "SKB-2026-046", description: "Estate administration", amount: 3500, status: "Paid", issued: "15 Jul 2026", due: "01 Aug 2026", attorney: "K. Asante" },
-  { id: "INV-2026-034", client: "Kwame Osei", case: "SKB-2026-040", description: "Litigation services", amount: 5600, status: "Pending", issued: "15 Jul 2026", due: "15 Sep 2026", attorney: "D. Owusu" },
-];
-
+// "Sent" in DB displays with same amber style as "Pending" in old mock
 const STATUS_STYLES: Record<string, { bg: string; text: string }> = {
-  Paid:    { bg: "#ECFDF5", text: "#059669" },
-  Pending: { bg: "#FFFBEB", text: "#D97706" },
-  Overdue: { bg: "#FFF5F5", text: "#DC2626" },
+  Paid:     { bg: "#ECFDF5", text: "#059669" },
+  Sent:     { bg: "#FFFBEB", text: "#D97706" },
+  Draft:    { bg: "#F1F5F9", text: "#64748B" },
+  Overdue:  { bg: "#FFF5F5", text: "#DC2626" },
+  Disputed: { bg: "#FFF5F5", text: "#DC2626" },
+  Voided:   { bg: "#F1F5F9", text: "#94A3B8" },
 };
+
+// Display label: map "Sent" → "Pending" for user-facing label
+function statusLabel(s: string) {
+  return s === "Sent" ? "Pending" : s;
+}
 
 function fmt(n: number) { return `GHS ${n.toLocaleString()}`; }
 
-type Invoice = typeof INITIAL_INVOICES[number];
-
 export default function BillingPage() {
-  const [invoices, setInvoices] = useState<Invoice[]>(INITIAL_INVOICES);
+  // ── Convex ──────────────────────────────────────────────────────────────────
+  const rawInvoices  = useQuery(api.billing.list);
+  const allClients   = useQuery(api.clients.list);
+  const allCases     = useQuery(api.cases.list);
+  const markPaidFn   = useMutation(api.billing.markPaid);
+  const voidFn       = useMutation(api.billing.voidInvoices);
+  const createInv    = useMutation(api.billing.create);
+
+  const invoices = rawInvoices ?? [];
+
+  // ── Selection — keyed by invoiceNumber ──────────────────────────────────────
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [page, setPage] = useState(1);
+  const [page, setPage]         = useState(1);
 
   // New Invoice modal
   const [showNew, setShowNew] = useState(false);
   const [created, setCreated] = useState(false);
-  const [form, setForm] = useState({ client: "", caseId: "", description: "", amount: "", due: "", attorney: "" });
+  const [form, setForm] = useState({
+    clientId: "" as Id<"clients"> | "",
+    caseId:   "" as Id<"cases">   | "",
+    description: "",
+    amount: "",
+    dueDate: "",
+    attorney: "",
+    type: "Retainer",
+  });
 
   // Confirm dialogs
   const [confirmMarkPaid, setConfirmMarkPaid] = useState(false);
   const [confirmReminder, setConfirmReminder] = useState(false);
-  const [confirmVoid, setConfirmVoid] = useState(false);
+  const [confirmVoid,     setConfirmVoid]     = useState(false);
 
   // Brief feedback
   const [feedback, setFeedback] = useState<string | null>(null);
-
   useEffect(() => {
     if (!feedback) return;
     const t = setTimeout(() => setFeedback(null), 2500);
     return () => clearTimeout(t);
   }, [feedback]);
 
-  // Derived values computed from invoices state
+  // ── Derived stats ────────────────────────────────────────────────────────────
   const totalRevenue = invoices.filter((i) => i.status === "Paid").reduce((a, i) => a + i.amount, 0);
   const outstanding  = invoices.filter((i) => i.status !== "Paid").reduce((a, i) => a + i.amount, 0);
   const overdue      = invoices.filter((i) => i.status === "Overdue").reduce((a, i) => a + i.amount, 0);
-  const pendingAmt   = invoices.filter((i) => i.status === "Pending").reduce((a, i) => a + i.amount, 0);
+  const sentAmt      = invoices.filter((i) => i.status === "Sent" || i.status === "Draft").reduce((a, i) => a + i.amount, 0);
 
-  // Pagination
-  const totalPages = Math.max(1, Math.ceil(invoices.length / PAGE_SIZE));
-  const safePage = Math.min(page, totalPages);
+  // ── Pagination ───────────────────────────────────────────────────────────────
+  const totalPages   = Math.max(1, Math.ceil(invoices.length / PAGE_SIZE));
+  const safePage     = Math.min(page, totalPages);
   const pageInvoices = invoices.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
-  // Selection helpers
-  const pageIds = pageInvoices.map((i) => i.id);
-  const allPageSelected = pageIds.length > 0 && pageIds.every((id) => selected.has(id));
-  const somePageSelected = pageIds.some((id) => selected.has(id));
+  // ── Selection helpers ────────────────────────────────────────────────────────
+  const pageNums = pageInvoices.map((i) => i.invoiceNumber);
+  const allPageSelected  = pageNums.length > 0 && pageNums.every((n) => selected.has(n));
+  const somePageSelected = pageNums.some((n) => selected.has(n));
 
   function toggleAll() {
     setSelected((prev) => {
       const next = new Set(prev);
-      if (allPageSelected) {
-        pageIds.forEach((id) => next.delete(id));
-      } else {
-        pageIds.forEach((id) => next.add(id));
-      }
+      if (allPageSelected) { pageNums.forEach((n) => next.delete(n)); }
+      else                  { pageNums.forEach((n) => next.add(n)); }
       return next;
     });
   }
 
-  function toggleRow(id: string) {
+  function toggleRow(num: string) {
     setSelected((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (next.has(num)) next.delete(num); else next.add(num);
       return next;
     });
   }
 
-  // Bulk actions
-  function doMarkPaid() {
-    setInvoices((prev) =>
-      prev.map((inv) => selected.has(inv.id) ? { ...inv, status: "Paid" } : inv)
-    );
+  function getSelectedIds(): Id<"invoices">[] {
+    return invoices.filter((i) => selected.has(i.invoiceNumber)).map((i) => i._id);
+  }
+
+  // ── Bulk actions ─────────────────────────────────────────────────────────────
+  async function doMarkPaid() {
+    await markPaidFn({ ids: getSelectedIds() });
     setSelected(new Set());
     setConfirmMarkPaid(false);
   }
@@ -109,8 +123,8 @@ export default function BillingPage() {
     setFeedback("Exported");
   }
 
-  function doVoid() {
-    setInvoices((prev) => prev.filter((inv) => !selected.has(inv.id)));
+  async function doVoid() {
+    await voidFn({ ids: getSelectedIds() });
     setSelected(new Set());
     setConfirmVoid(false);
     setPage(1);
@@ -122,7 +136,7 @@ export default function BillingPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-bold text-[#0B2349]">Billing &amp; Invoices</h2>
-          <p className="text-sm text-[#94A3B8]">Financial summary — September 2026</p>
+          <p className="text-sm text-[#94A3B8]">Financial summary — {new Date().toLocaleString("en-GB", { month: "long", year: "numeric" })}</p>
         </div>
         <div className="flex gap-2">
           <button
@@ -155,9 +169,9 @@ export default function BillingPage() {
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
         {[
           { label: "Revenue Collected", value: fmt(totalRevenue), icon: "check-circle" as const, color: "#059669", bg: "#ECFDF5" },
-          { label: "Outstanding",        value: fmt(outstanding),  icon: "hourglass"   as const, color: "#D97706", bg: "#FFFBEB" },
-          { label: "Overdue",            value: fmt(overdue),      icon: "alert"       as const, color: "#DC2626", bg: "#FFF5F5" },
-          { label: "Pending Approval",   value: fmt(pendingAmt),   icon: "clock"       as const, color: "#64748B", bg: "#F1F5F9" },
+          { label: "Outstanding",       value: fmt(outstanding),  icon: "hourglass"   as const, color: "#D97706", bg: "#FFFBEB" },
+          { label: "Overdue",           value: fmt(overdue),      icon: "alert"       as const, color: "#DC2626", bg: "#FFF5F5" },
+          { label: "Pending / Sent",    value: fmt(sentAmt),      icon: "clock"       as const, color: "#64748B", bg: "#F1F5F9" },
         ].map((s) => (
           <div key={s.label} className="bg-white rounded-xl p-5 flex flex-col gap-3" style={{ border: "1px solid #F1F5F9", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
             <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: s.bg }}>
@@ -176,58 +190,53 @@ export default function BillingPage() {
         {/* Revenue by Attorney */}
         <div className="md:col-span-1 bg-white rounded-xl p-5" style={{ border: "1px solid #F1F5F9", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
           <h3 className="text-sm font-semibold text-[#0B2349] mb-1">Revenue by Attorney</h3>
-          <p className="text-[11px] text-[#94A3B8] mb-4">Sep 2026</p>
-          {[
-            { name: "E. Darko",  amount: 30200, color: "#0B2349" },
-            { name: "A. Mensah", amount: 20200, color: "#C9A227" },
-            { name: "D. Owusu",  amount: 15900, color: "#7C3AED" },
-            { name: "K. Asante", amount: 11200, color: "#059669" },
-          ].map((a) => (
-            <div key={a.name} className="mb-3.5">
-              <div className="flex justify-between text-[12px] mb-1">
-                <span className="text-[#374151] font-medium">{a.name}</span>
-                <span className="text-[#0B2349] font-semibold">GHS {(a.amount / 1000).toFixed(1)}k</span>
+          <p className="text-[11px] text-[#94A3B8] mb-4">{new Date().toLocaleString("en-GB", { month: "short", year: "numeric" })}</p>
+          {(() => {
+            const attyRevenue: Record<string, number> = {};
+            invoices.filter((i) => i.status === "Paid").forEach((i) => {
+              attyRevenue[i.attorney] = (attyRevenue[i.attorney] ?? 0) + i.amount;
+            });
+            const sorted = Object.entries(attyRevenue).sort((a, b) => b[1] - a[1]);
+            const max = sorted[0]?.[1] ?? 1;
+            const COLORS = ["#0B2349", "#C9A227", "#7C3AED", "#059669", "#D97706", "#DC2626"];
+            return sorted.slice(0, 5).map(([name, amount], i) => (
+              <div key={name} className="mb-3.5">
+                <div className="flex justify-between text-[12px] mb-1">
+                  <span className="text-[#374151] font-medium">{name}</span>
+                  <span className="text-[#0B2349] font-semibold">GHS {(amount / 1000).toFixed(1)}k</span>
+                </div>
+                <div className="h-2 rounded-full bg-[#F1F5F9]">
+                  <div className="h-2 rounded-full" style={{ width: `${(amount / max) * 100}%`, background: COLORS[i % COLORS.length] }} />
+                </div>
               </div>
-              <div className="h-2 rounded-full bg-[#F1F5F9]">
-                <div className="h-2 rounded-full" style={{ width: `${(a.amount / 30200) * 100}%`, background: a.color }} />
-              </div>
-            </div>
-          ))}
+            ));
+          })()}
         </div>
 
         {/* Invoices Panel */}
         <div className="md:col-span-2 bg-white rounded-xl overflow-hidden flex flex-col" style={{ border: "1px solid #F1F5F9", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
-          {/* Panel header */}
           <div className="px-5 py-4 border-b border-[#F1F5F9] flex items-center justify-between">
             <h3 className="text-sm font-semibold text-[#0B2349]">All Invoices</h3>
-            {selected.size > 0 && (
-              <span className="text-[11px] text-[#64748B]">{selected.size} selected</span>
-            )}
+            {selected.size > 0 && <span className="text-[11px] text-[#64748B]">{selected.size} selected</span>}
           </div>
 
-          {/* BulkToolbar — between header and table, shown when selection non-empty */}
           {selected.size > 0 && (
             <BulkToolbar count={selected.size} onClear={() => setSelected(new Set())}>
               <TBtn variant="success" onClick={() => setConfirmMarkPaid(true)}>
-                <Icon name="check-circle" className="w-3.5 h-3.5" />
-                Mark Paid
+                <Icon name="check-circle" className="w-3.5 h-3.5" /> Mark Paid
               </TBtn>
               <TBtn variant="default" onClick={() => setConfirmReminder(true)}>
-                <Icon name="mail" className="w-3.5 h-3.5" />
-                Send Reminder
+                <Icon name="mail" className="w-3.5 h-3.5" /> Send Reminder
               </TBtn>
               <TBtn variant="default" onClick={doExport}>
-                <Icon name="download" className="w-3.5 h-3.5" />
-                Export
+                <Icon name="download" className="w-3.5 h-3.5" /> Export
               </TBtn>
               <TBtn variant="danger" onClick={() => setConfirmVoid(true)}>
-                <Icon name="trash" className="w-3.5 h-3.5" />
-                Void
+                <Icon name="trash" className="w-3.5 h-3.5" /> Void
               </TBtn>
             </BulkToolbar>
           )}
 
-          {/* Table */}
           <div className="overflow-x-auto flex-1">
             <table className="w-full text-[12px]">
               <thead>
@@ -241,11 +250,7 @@ export default function BillingPage() {
                     />
                   </th>
                   {["Invoice", "Client", "Case", "Amount", "Status", "Due", ""].map((h) => (
-                    <th
-                      key={h}
-                      className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wide whitespace-nowrap"
-                      style={{ color: "#94A3B8" }}
-                    >
+                    <th key={h} className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wide whitespace-nowrap" style={{ color: "#94A3B8" }}>
                       {h}
                     </th>
                   ))}
@@ -253,34 +258,30 @@ export default function BillingPage() {
               </thead>
               <tbody>
                 {pageInvoices.map((inv) => {
-                  const ss = STATUS_STYLES[inv.status] ?? STATUS_STYLES.Pending;
-                  const isSelected = selected.has(inv.id);
+                  const ss = STATUS_STYLES[inv.status] ?? STATUS_STYLES.Sent;
+                  const isSelected = selected.has(inv.invoiceNumber);
                   return (
                     <tr
-                      key={inv.id}
+                      key={inv._id}
                       className="border-t border-[#F8FAFC] hover:bg-[#FAFBFF] transition-colors cursor-pointer"
                       style={isSelected ? { background: "#F0F4FF" } : undefined}
                     >
                       <td className="px-5 py-3.5" onClick={(e) => e.stopPropagation()}>
-                        <Checkbox
-                          checked={isSelected}
-                          onChange={() => toggleRow(inv.id)}
-                          aria-label={`Select ${inv.id}`}
-                        />
+                        <Checkbox checked={isSelected} onChange={() => toggleRow(inv.invoiceNumber)} aria-label={`Select ${inv.invoiceNumber}`} />
                       </td>
-                      <td className="px-5 py-3.5 font-mono font-medium text-[#0B2349] text-[11px] whitespace-nowrap">{inv.id}</td>
+                      <td className="px-5 py-3.5 font-mono font-medium text-[#0B2349] text-[11px] whitespace-nowrap">{inv.invoiceNumber}</td>
                       <td className="px-5 py-3.5">
-                        <p className="font-medium text-[#1e293b]">{inv.client}</p>
+                        <p className="font-medium text-[#1e293b]">{inv.clientName}</p>
                         <p className="text-[10px] text-[#94A3B8]">{inv.description}</p>
                       </td>
-                      <td className="px-5 py-3.5 font-mono text-[11px] text-[#94A3B8]">{inv.case}</td>
+                      <td className="px-5 py-3.5 font-mono text-[11px] text-[#94A3B8]">{inv.caseNumber}</td>
                       <td className="px-5 py-3.5 font-semibold text-[#0B2349] whitespace-nowrap">{fmt(inv.amount)}</td>
                       <td className="px-5 py-3.5">
                         <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: ss.bg, color: ss.text }}>
-                          {inv.status}
+                          {statusLabel(inv.status)}
                         </span>
                       </td>
-                      <td className="px-5 py-3.5 text-[#64748B] whitespace-nowrap">{inv.due}</td>
+                      <td className="px-5 py-3.5 text-[#64748B] whitespace-nowrap">{inv.dueDate}</td>
                       <td className="px-5 py-3.5">
                         <button className="rounded p-1.5 hover:bg-[#F1F5F9] text-[#94A3B8] hover:text-[#0B2349] transition-colors">
                           <Icon name="eye" className="w-3.5 h-3.5" />
@@ -300,7 +301,6 @@ export default function BillingPage() {
             </table>
           </div>
 
-          {/* Pagination footer */}
           <div className="border-t border-[#F1F5F9] px-5 py-3 flex items-center justify-between">
             <p className="text-[11px] text-[#94A3B8]">
               Showing {invoices.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, invoices.length)} of {invoices.length} invoices
@@ -323,68 +323,49 @@ export default function BillingPage() {
               <Icon name="check-circle" className="w-6 h-6" style={{ color: "#059669" } as React.CSSProperties} />
             </div>
             <p className="font-semibold text-[#1e293b]">Invoice created</p>
-            <p className="text-[13px] text-[#94A3B8] mt-1">The invoice has been queued for approval.</p>
-            <button
-              className="mt-4 rounded-lg px-4 py-2 text-[13px] font-medium text-white"
-              style={{ background: "#0B2349" }}
-              onClick={() => setShowNew(false)}
-            >
-              Done
-            </button>
+            <p className="text-[13px] text-[#94A3B8] mt-1">The invoice has been sent to the client.</p>
+            <button className="mt-4 rounded-lg px-4 py-2 text-[13px] font-medium text-white" style={{ background: "#0B2349" }} onClick={() => setShowNew(false)}>Done</button>
           </div>
         ) : (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <FormField label="Client" required>
-                <select className={inputCls} value={form.client} onChange={(e) => setForm((p) => ({ ...p, client: e.target.value }))}>
+                <select className={inputCls} value={form.clientId} onChange={(e) => setForm((p) => ({ ...p, clientId: e.target.value as Id<"clients"> }))}>
                   <option value="">Select client...</option>
-                  {["Ofori & Sons Ltd.", "Ghana Mining Co.", "TeleFlex Ghana", "Accra Realty Ltd.", "Goldfields Minerals"].map((c) => (
-                    <option key={c}>{c}</option>
-                  ))}
+                  {(allClients ?? []).map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
                 </select>
               </FormField>
-              <FormField label="Case ID" required>
-                <select className={inputCls} value={form.caseId} onChange={(e) => setForm((p) => ({ ...p, caseId: e.target.value }))}>
-                  <option value="">Select case...</option>
-                  {["SKB-2026-047", "SKB-2026-045", "SKB-2026-041", "SKB-2026-043", "SKB-2026-039"].map((c) => (
-                    <option key={c}>{c}</option>
-                  ))}
+              <FormField label="Case">
+                <select className={inputCls} value={form.caseId} onChange={(e) => setForm((p) => ({ ...p, caseId: e.target.value as Id<"cases"> }))}>
+                  <option value="">Select case (optional)...</option>
+                  {(allCases ?? [])
+                    .filter((c) => !form.clientId || c.clientId === form.clientId)
+                    .map((c) => <option key={c._id} value={c._id}>{c.caseNumber} — {c.clientName}</option>)}
                 </select>
               </FormField>
               <div className="col-span-2">
-                <FormField label="Description" required>
-                  <input
-                    className={inputCls}
-                    placeholder="e.g. Legal services — Oct 2026"
-                    value={form.description}
-                    onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
-                  />
+                <FormField label="Service Type" required>
+                  <select className={inputCls} value={form.type} onChange={(e) => setForm((p) => ({ ...p, type: e.target.value }))}>
+                    {["Retainer", "Consultation", "Legal Services", "Conveyancing", "Court Appearances", "Document Preparation"].map((t) => <option key={t}>{t}</option>)}
+                  </select>
+                </FormField>
+              </div>
+              <div className="col-span-2">
+                <FormField label="Description">
+                  <input className={inputCls} placeholder="e.g. Legal services — Oct 2026" value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} />
                 </FormField>
               </div>
               <FormField label="Amount (GHS)" required>
-                <input
-                  type="number"
-                  className={inputCls}
-                  placeholder="0.00"
-                  value={form.amount}
-                  onChange={(e) => setForm((p) => ({ ...p, amount: e.target.value }))}
-                />
+                <input type="number" className={inputCls} placeholder="0.00" value={form.amount} onChange={(e) => setForm((p) => ({ ...p, amount: e.target.value }))} />
               </FormField>
               <FormField label="Due Date" required>
-                <input
-                  type="date"
-                  className={inputCls}
-                  value={form.due}
-                  onChange={(e) => setForm((p) => ({ ...p, due: e.target.value }))}
-                />
+                <input type="date" className={inputCls} value={form.dueDate} onChange={(e) => setForm((p) => ({ ...p, dueDate: e.target.value }))} />
               </FormField>
               <div className="col-span-2">
                 <FormField label="Attorney">
                   <select className={inputCls} value={form.attorney} onChange={(e) => setForm((p) => ({ ...p, attorney: e.target.value }))}>
                     <option value="">Select attorney...</option>
-                    {["A. Mensah", "K. Asante", "E. Darko", "D. Owusu"].map((a) => (
-                      <option key={a}>{a}</option>
-                    ))}
+                    {["A. Mensah", "K. Asante", "E. Darko", "D. Owusu"].map((a) => <option key={a}>{a}</option>)}
                   </select>
                 </FormField>
               </div>
@@ -392,10 +373,19 @@ export default function BillingPage() {
             <ModalFooter
               onClose={() => setShowNew(false)}
               confirmLabel="Create Invoice"
-              onConfirm={() => {
-                if (form.client && form.amount) {
+              onConfirm={async () => {
+                if (form.clientId && form.amount && form.dueDate) {
+                  await createInv({
+                    clientId: form.clientId as Id<"clients">,
+                    caseId: form.caseId ? (form.caseId as Id<"cases">) : undefined,
+                    type: form.type,
+                    amount: parseFloat(form.amount),
+                    attorney: form.attorney || "Unassigned",
+                    description: form.description || undefined,
+                    dueDate: new Date(form.dueDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
+                  });
                   setCreated(true);
-                  setForm({ client: "", caseId: "", description: "", amount: "", due: "", attorney: "" });
+                  setForm({ clientId: "", caseId: "", description: "", amount: "", dueDate: "", attorney: "", type: "Retainer" });
                 }
               }}
             />
@@ -404,36 +394,13 @@ export default function BillingPage() {
       </Modal>
 
       {/* Confirm: Mark Paid */}
-      <ConfirmDialog
-        isOpen={confirmMarkPaid}
-        onClose={() => setConfirmMarkPaid(false)}
-        onConfirm={doMarkPaid}
-        title="Mark as Paid"
-        message={`Mark ${selected.size} invoice${selected.size !== 1 ? "s" : ""} as Paid? This will update their status immediately.`}
-        confirmLabel="Mark Paid"
-        variant="success"
-      />
+      <ConfirmDialog isOpen={confirmMarkPaid} onClose={() => setConfirmMarkPaid(false)} onConfirm={doMarkPaid} title="Mark as Paid" message={`Mark ${selected.size} invoice${selected.size !== 1 ? "s" : ""} as Paid?`} confirmLabel="Mark Paid" variant="success" />
 
       {/* Confirm: Send Reminder */}
-      <ConfirmDialog
-        isOpen={confirmReminder}
-        onClose={() => setConfirmReminder(false)}
-        onConfirm={doSendReminder}
-        title="Send Reminders"
-        message={`Send payment reminders for ${selected.size} invoice${selected.size !== 1 ? "s" : ""}?`}
-        confirmLabel="Send Reminder"
-      />
+      <ConfirmDialog isOpen={confirmReminder} onClose={() => setConfirmReminder(false)} onConfirm={doSendReminder} title="Send Reminders" message={`Send payment reminders for ${selected.size} invoice${selected.size !== 1 ? "s" : ""}?`} confirmLabel="Send Reminder" />
 
       {/* Confirm: Void */}
-      <ConfirmDialog
-        isOpen={confirmVoid}
-        onClose={() => setConfirmVoid(false)}
-        onConfirm={doVoid}
-        title="Void Invoices"
-        message={`Void and remove ${selected.size} invoice${selected.size !== 1 ? "s" : ""}? This action cannot be undone.`}
-        confirmLabel="Void"
-        variant="danger"
-      />
+      <ConfirmDialog isOpen={confirmVoid} onClose={() => setConfirmVoid(false)} onConfirm={doVoid} title="Void Invoices" message={`Void and remove ${selected.size} invoice${selected.size !== 1 ? "s" : ""}? This cannot be undone.`} confirmLabel="Void" variant="danger" />
     </div>
   );
 }

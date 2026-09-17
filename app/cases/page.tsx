@@ -4,25 +4,26 @@ import { useState, useEffect } from "react";
 import { Icon } from "@/components/Icons";
 import { Modal, ConfirmDialog, FormField, ModalFooter, inputCls } from "@/components/Modal";
 import { Pagination, BulkToolbar, TBtn, Checkbox } from "@/components/TableControls";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 
 // ---------------------------------------------------------------------------
-// Data
+// Data shape for display (mapped from Convex doc)
 // ---------------------------------------------------------------------------
 
-const INITIAL_CASES = [
-  { id: "SKB-2026-047", client: "Ofori & Sons Ltd.", clientType: "Corporate", type: "Corporate", attorney: "A. Mensah", status: "Active", filed: "01 Sep 2026", hearing: "18 Sep 2026", priority: "High" },
-  { id: "SKB-2026-046", client: "Adwoa Boateng", clientType: "Individual", type: "Estate & Probate", attorney: "K. Asante", status: "Pending", filed: "28 Aug 2026", hearing: "22 Sep 2026", priority: "Medium" },
-  { id: "SKB-2026-045", client: "Ghana Mining Co.", clientType: "Corporate", type: "Mining & Energy", attorney: "E. Darko", status: "Active", filed: "20 Aug 2026", hearing: "25 Sep 2026", priority: "High" },
-  { id: "SKB-2026-044", client: "Kofi Agyeman", clientType: "Individual", type: "Employment", attorney: "A. Mensah", status: "On Hold", filed: "15 Aug 2026", hearing: "—", priority: "Low" },
-  { id: "SKB-2026-043", client: "Accra Realty Ltd.", clientType: "Corporate", type: "Real Estate", attorney: "D. Owusu", status: "Active", filed: "10 Aug 2026", hearing: "01 Oct 2026", priority: "Medium" },
-  { id: "SKB-2026-042", client: "Yaa Asantewaa Trust", clientType: "Trust", type: "Estate & Probate", attorney: "K. Asante", status: "Closed", filed: "01 Jul 2026", hearing: "—", priority: "Low" },
-  { id: "SKB-2026-041", client: "TeleFlex Ghana", clientType: "Corporate", type: "Telecom & Tech", attorney: "E. Darko", status: "Active", filed: "15 Jul 2026", hearing: "03 Oct 2026", priority: "High" },
-  { id: "SKB-2026-040", client: "Kwame Osei", clientType: "Individual", type: "Litigation", attorney: "D. Owusu", status: "Active", filed: "08 Jul 2026", hearing: "07 Oct 2026", priority: "Medium" },
-  { id: "SKB-2026-039", client: "Goldfields Minerals", clientType: "Corporate", type: "Mining & Energy", attorney: "E. Darko", status: "Active", filed: "01 Jul 2026", hearing: "20 Sep 2026", priority: "High" },
-  { id: "SKB-2026-038", client: "Akua Twum", clientType: "Individual", type: "Land & Chieftaincy", attorney: "K. Asante", status: "Pending", filed: "20 Jun 2026", hearing: "12 Oct 2026", priority: "Medium" },
-  { id: "SKB-2026-037", client: "Adom Broadcasting", clientType: "Corporate", type: "Telecom & Tech", attorney: "A. Mensah", status: "Active", filed: "10 Jun 2026", hearing: "15 Oct 2026", priority: "Medium" },
-  { id: "SKB-2026-036", client: "Ama Sarpong", clientType: "Individual", type: "Employment", attorney: "D. Owusu", status: "Closed", filed: "01 Jun 2026", hearing: "—", priority: "Low" },
-];
+type CaseRow = {
+  id: string;
+  _id: Id<"cases">;
+  client: string;
+  clientType: string;
+  type: string;
+  attorney: string;
+  status: string;
+  filed: string;
+  hearing: string;
+  priority: string;
+};
 
 const STATUSES    = ["All", "Active", "Pending", "On Hold", "Closed"];
 const TYPES       = ["All Types", "Corporate", "Estate & Probate", "Mining & Energy", "Real Estate", "Employment", "Telecom & Tech", "Litigation", "Land & Chieftaincy"];
@@ -65,11 +66,27 @@ function PriorityBadge({ p }: { p: string }) {
 // Page
 // ---------------------------------------------------------------------------
 
-type CaseRow = typeof INITIAL_CASES[number];
-
 export default function CasesPage() {
-  // ── core data in state so bulk mutations work ──────────────────────────────
-  const [cases, setCases] = useState<CaseRow[]>(INITIAL_CASES);
+  // ── Convex data ────────────────────────────────────────────────────────────
+  const rawCases = useQuery(api.cases.list);
+  const bulkUpdateStatus = useMutation(api.cases.bulkUpdateStatus);
+  const bulkReassign     = useMutation(api.cases.bulkReassign);
+  const removeCases      = useMutation(api.cases.remove);
+  const createCase       = useMutation(api.cases.create);
+
+  // ── Flatten to display shape ───────────────────────────────────────────────
+  const cases: CaseRow[] = (rawCases ?? []).map((c) => ({
+    id:         c.caseNumber,
+    _id:        c._id,
+    client:     c.clientName,
+    clientType: c.clientType,
+    type:       c.type,
+    attorney:   c.attorney,
+    status:     c.status,
+    filed:      c.openedDate,
+    hearing:    c.nextHearing ?? "—",
+    priority:   c.priority,
+  }));
 
   // ── filters ───────────────────────────────────────────────────────────────
   const [statusFilter, setStatusFilter] = useState("All");
@@ -87,9 +104,10 @@ export default function CasesPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   // ── new-case modal ────────────────────────────────────────────────────────
+  const allClients = useQuery(api.clients.list);
   const [showNewCase, setShowNewCase] = useState(false);
   const [newCase, setNewCase] = useState({
-    title: "", client: "", practiceArea: "", attorney: "", priority: "Medium", description: "",
+    title: "", clientId: "" as Id<"clients"> | "", practiceArea: "", attorney: "", priority: "Medium", description: "",
   });
   const [caseAdded, setCaseAdded] = useState(false);
 
@@ -147,18 +165,19 @@ export default function CasesPage() {
   function clearSelection() { setSelected(new Set()); }
 
   // ── bulk actions ──────────────────────────────────────────────────────────
-  function applyBulkStatus() {
-    setCases((prev) =>
-      prev.map((c) => selected.has(c.id) ? { ...c, status: bulkStatus } : c)
-    );
+  function getSelectedIds(): Id<"cases">[] {
+    return cases.filter((c) => selected.has(c.id)).map((c) => c._id);
+  }
+
+  async function applyBulkStatus() {
+    const status = bulkStatus as "Active" | "Pending" | "On Hold" | "Closed" | "Settled";
+    await bulkUpdateStatus({ ids: getSelectedIds(), status });
     clearSelection();
     setShowStatusModal(false);
   }
 
-  function applyBulkReassign() {
-    setCases((prev) =>
-      prev.map((c) => selected.has(c.id) ? { ...c, attorney: bulkAttorney } : c)
-    );
+  async function applyBulkReassign() {
+    await bulkReassign({ ids: getSelectedIds(), attorney: bulkAttorney });
     clearSelection();
     setShowReassign(false);
   }
@@ -170,8 +189,8 @@ export default function CasesPage() {
     setTimeout(() => setExportMsg(""), 2000);
   }
 
-  function applyBulkDelete() {
-    setCases((prev) => prev.filter((c) => !selected.has(c.id)));
+  async function applyBulkDelete() {
+    await removeCases({ ids: getSelectedIds() });
     clearSelection();
     setShowDeleteConfirm(false);
   }
@@ -434,12 +453,12 @@ export default function CasesPage() {
                 <FormField label="Client" required>
                   <select
                     className={inputCls}
-                    value={newCase.client}
-                    onChange={(e) => setNewCase((p) => ({ ...p, client: e.target.value }))}
+                    value={newCase.clientId}
+                    onChange={(e) => setNewCase((p) => ({ ...p, clientId: e.target.value as Id<"clients"> }))}
                   >
                     <option value="">Select client...</option>
-                    {["Ofori & Sons Ltd.", "Ghana Mining Co.", "TeleFlex Ghana", "Accra Realty Ltd.", "Goldfields Minerals", "Adom Broadcasting"].map((c) => (
-                      <option key={c}>{c}</option>
+                    {(allClients ?? []).map((c) => (
+                      <option key={c._id} value={c._id}>{c.name}</option>
                     ))}
                   </select>
                 </FormField>
@@ -492,10 +511,18 @@ export default function CasesPage() {
             <ModalFooter
               onClose={() => setShowNewCase(false)}
               confirmLabel="Open Case"
-              onConfirm={() => {
-                if (newCase.title && newCase.client) {
+              onConfirm={async () => {
+                if (newCase.title && newCase.clientId) {
+                  await createCase({
+                    title: newCase.title,
+                    clientId: newCase.clientId as Id<"clients">,
+                    type: newCase.practiceArea || "Corporate",
+                    attorney: newCase.attorney || "Unassigned",
+                    priority: (newCase.priority as "High" | "Medium" | "Low") || "Medium",
+                    description: newCase.description || undefined,
+                  });
                   setCaseAdded(true);
-                  setNewCase({ title: "", client: "", practiceArea: "", attorney: "", priority: "Medium", description: "" });
+                  setNewCase({ title: "", clientId: "", practiceArea: "", attorney: "", priority: "Medium", description: "" });
                 }
               }}
             />

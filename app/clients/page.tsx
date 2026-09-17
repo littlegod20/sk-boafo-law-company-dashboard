@@ -4,21 +4,9 @@ import { useState, useEffect } from "react";
 import { Icon } from "@/components/Icons";
 import { Modal, FormField, ModalFooter, inputCls, ConfirmDialog } from "@/components/Modal";
 import { Pagination, BulkToolbar, TBtn, Checkbox } from "@/components/TableControls";
-
-const INITIAL_CLIENTS = [
-  { id: "CLT-001", name: "Ofori & Sons Ltd.", type: "Corporate", contact: "+233 20 811 4401", email: "info@oforiandson.gh", activeCases: 3, totalCases: 5, joined: "Mar 2022", attorney: "A. Mensah" },
-  { id: "CLT-002", name: "Adwoa Boateng", type: "Individual", contact: "+233 24 552 7703", email: "adwoa.b@gmail.com", activeCases: 1, totalCases: 2, joined: "Jan 2024", attorney: "K. Asante" },
-  { id: "CLT-003", name: "Ghana Mining Co.", type: "Corporate", contact: "+233 30 274 1100", email: "legal@ghanamining.com", activeCases: 2, totalCases: 4, joined: "Jun 2021", attorney: "E. Darko" },
-  { id: "CLT-004", name: "Kofi Agyeman", type: "Individual", contact: "+233 27 315 8890", email: "k.agyeman@outlook.com", activeCases: 1, totalCases: 1, joined: "Aug 2026", attorney: "A. Mensah" },
-  { id: "CLT-005", name: "Accra Realty Ltd.", type: "Corporate", contact: "+233 30 278 4450", email: "admin@accra-realty.gh", activeCases: 1, totalCases: 3, joined: "Sep 2020", attorney: "D. Owusu" },
-  { id: "CLT-006", name: "Yaa Asantewaa Trust", type: "Trust", contact: "+233 32 204 7700", email: "trust@yaaasantewaa.org", activeCases: 0, totalCases: 2, joined: "Nov 2019", attorney: "K. Asante" },
-  { id: "CLT-007", name: "TeleFlex Ghana", type: "Corporate", contact: "+233 30 291 2233", email: "legal@teleflex.gh", activeCases: 1, totalCases: 2, joined: "Feb 2023", attorney: "E. Darko" },
-  { id: "CLT-008", name: "Kwame Osei", type: "Individual", contact: "+233 26 448 1122", email: "kwameosei.law@yahoo.com", activeCases: 1, totalCases: 1, joined: "Jul 2026", attorney: "D. Owusu" },
-  { id: "CLT-009", name: "Goldfields Minerals", type: "Corporate", contact: "+233 30 299 5500", email: "compliance@goldfields.gh", activeCases: 1, totalCases: 3, joined: "Apr 2019", attorney: "E. Darko" },
-  { id: "CLT-010", name: "Akua Twum", type: "Individual", contact: "+233 20 767 3344", email: "akuatwum1987@gmail.com", activeCases: 1, totalCases: 1, joined: "Jun 2026", attorney: "K. Asante" },
-  { id: "CLT-011", name: "Adom Broadcasting", type: "Corporate", contact: "+233 30 281 7788", email: "legal@adom.com.gh", activeCases: 1, totalCases: 2, joined: "Jan 2022", attorney: "A. Mensah" },
-  { id: "CLT-012", name: "Ama Sarpong", type: "Individual", contact: "+233 55 224 9910", email: "ama.sarpong@hotmail.com", activeCases: 0, totalCases: 1, joined: "Jun 2026", attorney: "D. Owusu" },
-];
+import { useQuery, useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 
 const TYPE_COLORS: Record<string, { bg: string; text: string }> = {
   Corporate:  { bg: "#EFF4FF", text: "#1d4ed8" },
@@ -26,7 +14,6 @@ const TYPE_COLORS: Record<string, { bg: string; text: string }> = {
   Trust:      { bg: "#FDF4FF", text: "#7e22ce" },
 };
 
-// Avatar color palette — cycles through a set of brand-adjacent colors
 const AVATAR_PALETTE = [
   { bg: "#EFF4FF", color: "#1d4ed8" },
   { bg: "#ECFDF5", color: "#059669" },
@@ -43,26 +30,26 @@ function avatarStyle(index: number) {
 }
 
 const ATTORNEYS = ["A. Mensah", "K. Asante", "E. Darko", "D. Owusu"];
-
 const PAGE_SIZE = 6;
 
-type Client = typeof INITIAL_CLIENTS[number];
-
 export default function ClientsPage() {
-  const [clients, setClients] = useState<Client[]>(INITIAL_CLIENTS);
+  // ── Convex data ─────────────────────────────────────────────────────────────
+  const rawClients = useQuery(api.clients.list);
+  const createClient     = useMutation(api.clients.create);
+  const assignAttorneyFn = useMutation(api.clients.assignAttorney);
+  const removeClients    = useMutation(api.clients.remove);
+
+  const clients = rawClients ?? [];
 
   // Add Client modal
   const [showAdd, setShowAdd] = useState(false);
   const [added, setAdded] = useState(false);
-  const [form, setForm] = useState({ name: "", type: "Corporate", phone: "", email: "", address: "", attorney: "" });
-
-  // Filters / search (placeholder for future use — kept so filter reset wires in)
-  const [filterType] = useState<string>("All");
+  const [form, setForm] = useState({ name: "", type: "Corporate" as "Corporate" | "Individual" | "Trust", contact: "", email: "", address: "", attorney: "" });
 
   // Pagination
   const [page, setPage] = useState(1);
 
-  // Row selection
+  // Row selection — uses clientRef as key
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   // Bulk action modals
@@ -71,50 +58,43 @@ export default function ClientsPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [exportFeedback, setExportFeedback] = useState(false);
 
-  // Reset page when filters change
+  // Reset page when data length changes
   useEffect(() => {
     setPage(1);
     setSelected(new Set());
-  }, [filterType]);
+  }, [rawClients?.length]);
 
-  // Derived: filtered list (extend this when search/filter controls are added)
-  const filtered = clients;
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(clients.length / PAGE_SIZE));
+  const paginated  = clients.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  // Select-all state for current page
-  const pageIds = paginated.map((c) => c.id);
-  const allPageSelected = pageIds.length > 0 && pageIds.every((id) => selected.has(id));
-  const somePageSelected = pageIds.some((id) => selected.has(id));
+  // Select-all logic — keyed by clientRef
+  const pageRefs = paginated.map((c) => c.clientRef);
+  const allPageSelected  = pageRefs.length > 0 && pageRefs.every((r) => selected.has(r));
+  const somePageSelected = pageRefs.some((r) => selected.has(r));
 
   function toggleAll() {
     setSelected((prev) => {
       const next = new Set(prev);
-      if (allPageSelected) {
-        pageIds.forEach((id) => next.delete(id));
-      } else {
-        pageIds.forEach((id) => next.add(id));
-      }
+      if (allPageSelected) { pageRefs.forEach((r) => next.delete(r)); }
+      else                 { pageRefs.forEach((r) => next.add(r)); }
       return next;
     });
   }
 
-  function toggleRow(id: string) {
+  function toggleRow(ref: string) {
     setSelected((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
+      if (next.has(ref)) next.delete(ref); else next.add(ref);
       return next;
     });
   }
 
-  function handleAssignAttorney() {
-    setClients((prev) =>
-      prev.map((c) => (selected.has(c.id) ? { ...c, attorney: assignAttorney } : c))
-    );
+  function getSelectedIds(): Id<"clients">[] {
+    return clients.filter((c) => selected.has(c.clientRef)).map((c) => c._id);
+  }
+
+  async function handleAssignAttorney() {
+    await assignAttorneyFn({ ids: getSelectedIds(), attorney: assignAttorney });
     setSelected(new Set());
     setShowAssign(false);
   }
@@ -125,16 +105,16 @@ export default function ClientsPage() {
     setTimeout(() => setExportFeedback(false), 2500);
   }
 
-  function handleDelete() {
-    setClients((prev) => prev.filter((c) => !selected.has(c.id)));
+  async function handleDelete() {
+    await removeClients({ ids: getSelectedIds() });
     setSelected(new Set());
     setShowDeleteConfirm(false);
-    // Snap page back if current page is now beyond range
-    setPage((p) => {
-      const newTotal = Math.max(1, Math.ceil((clients.length - selected.size) / PAGE_SIZE));
-      return Math.min(p, newTotal);
-    });
+    setPage((p) => Math.min(p, Math.max(1, Math.ceil((clients.length - selected.size) / PAGE_SIZE))));
   }
+
+  // Summary stats from live data
+  const corporate  = clients.filter((c) => c.type === "Corporate").length;
+  const individual = clients.filter((c) => c.type === "Individual").length;
 
   return (
     <div className="space-y-5 max-w-[1400px]">
@@ -166,9 +146,9 @@ export default function ClientsPage() {
       {/* Summary Cards */}
       <div className="grid grid-cols-3 gap-4">
         {[
-          { label: "Total Clients", value: 124, icon: "users" as const, color: "#0B2349", bg: "#EFF4FF" },
-          { label: "Corporate",     value: 71,  icon: "building" as const, color: "#1d4ed8", bg: "#EFF4FF" },
-          { label: "Individual",    value: 53,  icon: "user" as const, color: "#059669", bg: "#ECFDF5" },
+          { label: "Total Clients", value: clients.length, icon: "users" as const,    color: "#0B2349", bg: "#EFF4FF" },
+          { label: "Corporate",     value: corporate,       icon: "building" as const, color: "#1d4ed8", bg: "#EFF4FF" },
+          { label: "Individual",    value: individual,      icon: "user" as const,     color: "#059669", bg: "#ECFDF5" },
         ].map((s) => (
           <div key={s.label} className="bg-white rounded-xl p-4 flex items-center gap-4" style={{ border: "1px solid #F1F5F9", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
             <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: s.bg }}>
@@ -188,12 +168,8 @@ export default function ClientsPage() {
           <TBtn onClick={() => { setAssignAttorney(ATTORNEYS[0]); setShowAssign(true); }}>
             Assign Attorney
           </TBtn>
-          <TBtn onClick={handleExport}>
-            Export
-          </TBtn>
-          <TBtn variant="danger" onClick={() => setShowDeleteConfirm(true)}>
-            Delete
-          </TBtn>
+          <TBtn onClick={handleExport}>Export</TBtn>
+          <TBtn variant="danger" onClick={() => setShowDeleteConfirm(true)}>Delete</TBtn>
         </BulkToolbar>
       )}
 
@@ -221,20 +197,17 @@ export default function ClientsPage() {
               {paginated.map((c, rowIdx) => {
                 const tc = TYPE_COLORS[c.type] ?? { bg: "#F1F5F9", text: "#64748B" };
                 const av = avatarStyle(rowIdx);
-                const isSelected = selected.has(c.id);
+                const isSelected = selected.has(c.clientRef);
                 return (
                   <tr
-                    key={c.id}
+                    key={c._id}
                     className="border-t border-[#F8FAFC] hover:bg-[#FAFBFF] transition-colors cursor-pointer"
                     style={isSelected ? { background: "#F0F5FF" } : undefined}
                   >
                     <td className="px-4 py-3.5 w-10" onClick={(e) => e.stopPropagation()}>
-                      <Checkbox
-                        checked={isSelected}
-                        onChange={() => toggleRow(c.id)}
-                      />
+                      <Checkbox checked={isSelected} onChange={() => toggleRow(c.clientRef)} />
                     </td>
-                    <td className="px-5 py-3.5 font-mono text-[11px] text-[#94A3B8]">{c.id}</td>
+                    <td className="px-5 py-3.5 font-mono text-[11px] text-[#94A3B8]">{c.clientRef}</td>
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-2.5">
                         <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0" style={{ background: av.bg, color: av.color }}>
@@ -273,18 +246,19 @@ export default function ClientsPage() {
                   </tr>
                 );
               })}
+              {clients.length === 0 && (
+                <tr>
+                  <td colSpan={10} className="px-5 py-16 text-center text-[12px] text-[#94A3B8]">
+                    No clients found.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
 
-        {/* Table Footer — Pagination */}
         <div className="border-t border-[#F1F5F9] px-5 py-3">
-          <Pagination
-            page={page}
-            total={filtered.length}
-            pageSize={PAGE_SIZE}
-            onChange={setPage}
-          />
+          <Pagination page={page} total={clients.length} pageSize={PAGE_SIZE} onChange={setPage} />
         </div>
       </div>
 
@@ -308,7 +282,7 @@ export default function ClientsPage() {
                 </FormField>
               </div>
               <FormField label="Client Type" required>
-                <select className={inputCls} value={form.type} onChange={(e) => setForm((p) => ({ ...p, type: e.target.value }))}>
+                <select className={inputCls} value={form.type} onChange={(e) => setForm((p) => ({ ...p, type: e.target.value as "Corporate" | "Individual" | "Trust" }))}>
                   {["Corporate", "Individual", "Trust"].map((t) => <option key={t}>{t}</option>)}
                 </select>
               </FormField>
@@ -319,7 +293,7 @@ export default function ClientsPage() {
                 </select>
               </FormField>
               <FormField label="Phone Number">
-                <input className={inputCls} placeholder="+233 ..." value={form.phone} onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))} />
+                <input className={inputCls} placeholder="+233 ..." value={form.contact} onChange={(e) => setForm((p) => ({ ...p, contact: e.target.value }))} />
               </FormField>
               <FormField label="Email Address">
                 <input className={inputCls} type="email" placeholder="client@example.com" value={form.email} onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))} />
@@ -333,25 +307,18 @@ export default function ClientsPage() {
             <ModalFooter
               onClose={() => setShowAdd(false)}
               confirmLabel="Add Client"
-              onConfirm={() => {
+              onConfirm={async () => {
                 if (form.name) {
-                  const newId = `CLT-${String(clients.length + 1).padStart(3, "0")}`;
-                  setClients((prev) => [
-                    ...prev,
-                    {
-                      id: newId,
-                      name: form.name,
-                      type: form.type,
-                      contact: form.phone || "—",
-                      email: form.email || "—",
-                      activeCases: 0,
-                      totalCases: 0,
-                      joined: new Date().toLocaleString("en-GB", { month: "short", year: "numeric" }),
-                      attorney: form.attorney || "Unassigned",
-                    },
-                  ]);
+                  await createClient({
+                    name: form.name,
+                    type: form.type,
+                    contact: form.contact || "—",
+                    email: form.email || "—",
+                    address: form.address || undefined,
+                    attorney: form.attorney || "Unassigned",
+                  });
                   setAdded(true);
-                  setForm({ name: "", type: "Corporate", phone: "", email: "", address: "", attorney: "" });
+                  setForm({ name: "", type: "Corporate", contact: "", email: "", address: "", attorney: "" });
                 }
               }}
             />
@@ -366,19 +333,11 @@ export default function ClientsPage() {
             Assign a lead attorney to <span className="font-semibold text-[#1e293b]">{selected.size}</span> selected client{selected.size !== 1 ? "s" : ""}.
           </p>
           <FormField label="Lead Attorney" required>
-            <select
-              className={inputCls}
-              value={assignAttorney}
-              onChange={(e) => setAssignAttorney(e.target.value)}
-            >
+            <select className={inputCls} value={assignAttorney} onChange={(e) => setAssignAttorney(e.target.value)}>
               {ATTORNEYS.map((a) => <option key={a}>{a}</option>)}
             </select>
           </FormField>
-          <ModalFooter
-            onClose={() => setShowAssign(false)}
-            confirmLabel="Apply"
-            onConfirm={handleAssignAttorney}
-          />
+          <ModalFooter onClose={() => setShowAssign(false)} confirmLabel="Apply" onConfirm={handleAssignAttorney} />
         </div>
       </Modal>
 

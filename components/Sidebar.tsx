@@ -5,6 +5,9 @@ import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
 import { Icon } from "./Icons";
 import { ConfirmDialog, Modal, FormField, ModalFooter, inputCls } from "./Modal";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { useAuthActions } from "@convex-dev/auth/react";
 
 // ── Shared personal nav (all non-HR roles) ───────────────────────────────────
 const PERSONAL_NAV = [
@@ -103,11 +106,15 @@ const ROLES = [
   { id: "hr_officer",       label: "HR Officer",       color: "#0891b2" },
 ];
 
-interface StoredUser {
-  name: string;
-  role: string;
-  email: string;
-}
+// Role id → display label (for sidebar display of DB role)
+const ROLE_ID_TO_LABEL: Record<string, string> = {
+  managing_partner: "Managing Partner",
+  partner:          "Partner",
+  associate:        "Associate",
+  paralegal:        "Paralegal",
+  admin:            "Admin",
+  hr_officer:       "HR Officer",
+};
 
 // Shared nav link renderer used by both role nav sets
 function NavLink({
@@ -162,6 +169,10 @@ function initials(name: string) {
 export default function Sidebar() {
   const pathname  = usePathname();
   const router    = useRouter();
+  const { signOut } = useAuthActions();
+
+  // Live user from Convex
+  const dbUser = useQuery(api.users.getCurrentUser);
 
   const [activeRole, setActiveRole]         = useState("managing_partner");
   const [roleOpen, setRoleOpen]             = useState(false);
@@ -178,35 +189,17 @@ export default function Sidebar() {
   const [pwForm, setPwForm] = useState({ current: "", next: "", confirm: "" });
   const [pwError, setPwError] = useState("");
 
-  // Logged-in user from localStorage
-  const [loggedUser, setLoggedUser] = useState<StoredUser>({
-    name: "S.K. Boafo",
-    role: "Managing Partner",
-    email: "sk.boafo@skboafo.gh",
-  });
-
-  // Role label → ROLES id map
-  const ROLE_LABEL_TO_ID: Record<string, string> = {
-    "Managing Partner": "managing_partner",
-    "Partner":          "partner",
-    "Associate":        "associate",
-    "Paralegal":        "paralegal",
-    "Admin":            "admin",
-    "HR Officer":       "hr_officer",
-  };
-
+  // Sync activeRole whenever the DB user loads
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem("sk_boafo_user");
-      if (raw) {
-        const user: StoredUser = JSON.parse(raw);
-        setLoggedUser(user);
-        const roleId = ROLE_LABEL_TO_ID[user.role];
-        if (roleId) setActiveRole(roleId);
-      }
-    } catch {}
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (dbUser?.role) setActiveRole(dbUser.role);
+  }, [dbUser?.role]);
+
+  // Derived display user — use DB record when loaded, sensible fallback while loading
+  const loggedUser = {
+    name:  dbUser?.name  ?? "Loading…",
+    role:  ROLE_ID_TO_LABEL[dbUser?.role ?? ""] ?? "Staff",
+    email: dbUser?.email ?? "",
+  };
 
   const profileRef = useRef<HTMLDivElement>(null);
 
@@ -238,9 +231,8 @@ export default function Sidebar() {
     }
   };
 
-  const handleSignOut = () => {
-    localStorage.removeItem("sk_boafo_auth");
-    localStorage.removeItem("sk_boafo_user");
+  const handleSignOut = async () => {
+    await signOut();
     router.push("/login");
   };
 
@@ -557,10 +549,10 @@ export default function Sidebar() {
         <div className="mt-4 rounded-xl border border-[#E2E8F0] divide-y divide-[#F1F5F9] overflow-hidden">
           {[
             { label: "Email",        value: loggedUser.email },
-            { label: "Phone",        value: "+233 30 277 0000" },
-            { label: "Department",   value: "Litigation & Dispute Resolution" },
-            { label: "Bar Number",   value: "GHA-BAR-2009-0047" },
-            { label: "Joined",       value: "January 2009" },
+            { label: "Phone",        value: dbUser?.workPhone ?? "—" },
+            { label: "Department",   value: dbUser?.dept ?? "—" },
+            { label: "Bar Number",   value: dbUser?.barNumber ?? "—" },
+            { label: "Joined",       value: dbUser?.joinedDate ?? "—" },
           ].map(({ label, value }) => (
             <div key={label} className="flex items-center justify-between px-4 py-3">
               <span className="text-[11px] font-semibold uppercase tracking-wide text-[#94A3B8]">{label}</span>
