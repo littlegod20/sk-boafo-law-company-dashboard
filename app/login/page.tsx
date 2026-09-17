@@ -68,17 +68,14 @@ export default function LoginPage() {
           >
             <div className="text-center mb-8">
               <div
-                className="w-14 h-14 rounded-xl flex items-center justify-center text-xl font-bold mx-auto mb-4"
-                style={{ background: "#0B2349", color: "#C9A227" }}
+                className="rounded-xl overflow-hidden mb-4 mx-auto"
               >
-                SK
+                <img
+                  src="/SK-Boafo-logo.png"
+                  alt="S.K. Boafo & Company"
+                  className="w-full h-auto block"
+                />
               </div>
-              <h1
-                className="text-2xl font-bold text-[#0B2349] mb-1"
-                style={{ fontFamily: '"Baskerville", "Baskerville Old Face", "Palatino Linotype", Georgia, serif' }}
-              >
-                S.K. Boafo & Company
-              </h1>
               <p className="text-[12px] text-[#94A3B8] tracking-wide uppercase font-medium">
                 Gye Nyame Chambers — Practice Dashboard
               </p>
