@@ -181,11 +181,27 @@ export default function Sidebar() {
     email: "sk.boafo@skboafo.gh",
   });
 
+  // Role label → ROLES id map
+  const ROLE_LABEL_TO_ID: Record<string, string> = {
+    "Managing Partner": "managing_partner",
+    "Partner":          "partner",
+    "Associate":        "associate",
+    "Paralegal":        "paralegal",
+    "Admin":            "admin",
+    "HR Officer":       "hr_officer",
+  };
+
   useEffect(() => {
     try {
       const raw = localStorage.getItem("sk_boafo_user");
-      if (raw) setLoggedUser(JSON.parse(raw));
+      if (raw) {
+        const user: StoredUser = JSON.parse(raw);
+        setLoggedUser(user);
+        const roleId = ROLE_LABEL_TO_ID[user.role];
+        if (roleId) setActiveRole(roleId);
+      }
     } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const profileRef = useRef<HTMLDivElement>(null);
