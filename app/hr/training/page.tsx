@@ -1021,7 +1021,7 @@ export default function HRTrainingPage() {
                           value={q.prompt}
                           onChange={(e) => updateQuestion(q.id, { prompt: e.target.value })}
                         />
-                        {form.quiz.questions.length > 1 && (
+                        {(form.quiz?.questions.length ?? 0) > 1 && (
                           <button
                             onClick={() => removeQuestion(q.id)}
                             className="p-1 rounded hover:bg-[#FFF5F5] transition-colors flex-shrink-0"

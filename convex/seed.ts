@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { internalAction, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
+import type { Id } from "./_generated/dataModel";
 import { hashPbkdf2 } from "./crypto";
 
 // Run with: npx convex run seed:seed
@@ -18,7 +19,7 @@ export const seed = internalMutation({
     ] as const;
 
     for (const table of tables) {
-      const rows = await ctx.db.query(table as "announcements").collect();
+      const rows = await ctx.db.query(table).collect();
       for (const row of rows) await ctx.db.delete(row._id);
     }
 
@@ -35,7 +36,7 @@ export const seed = internalMutation({
       { name: "Yaa Bonsu",        email: "y.bonsu@skboafo.gh",         role: "hr_officer"       as const, dept: "Human Resources",               barNumber: undefined,           joinedDate: "Jul 2020",  workPhone: "+233 30 277 0008", employeeId: "EMP-008" },
     ];
 
-    const userIds: Record<string, ReturnType<typeof ctx.db.insert> extends Promise<infer T> ? T : never> = {} as any;
+    const userIds: Record<string, Id<"users">> = {};
     for (const u of userDefs) {
       const id = await ctx.db.insert("users", {
         name: u.name,
@@ -149,8 +150,8 @@ export const seed = internalMutation({
 
     // ── Leave Requests ────────────────────────────────────────────────────────
     // Note: these use employeeId — mapping by email to the seeded user
-    const emailToId = Object.fromEntries(
-      userDefs.map((u, _) => [u.email, userIds[u.email]])
+    const emailToId: Record<string, Id<"users">> = Object.fromEntries(
+      userDefs.map((u) => [u.email, userIds[u.email]])
     );
 
     const leaveDefs = [
@@ -439,7 +440,7 @@ export const seed = internalMutation({
     }
 
     // ── Expense Claims ────────────────────────────────────────────────────────
-    const firstUserId = Object.values(userIds)[0] as any;
+    const firstUserId = Object.values(userIds)[0]!;
 
     const expenseDefs = [
       { claimRef: "EXP-2026-008", employeeEmail: "y.bonsu@skboafo.gh",    role: "HR Officer",      category: "Training & Development", amount: 1200, date: "12 Sep 2026", submitted: "13 Sep 2026", description: "HR conference registration fee",     status: "Pending"  as const, receipt: true  },
