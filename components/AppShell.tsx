@@ -1,31 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
+import { useConvexAuth } from "convex/react";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const router   = useRouter();
-  const [ready, setReady] = useState(false);
-
+  const { isLoading } = useConvexAuth();
   const isLogin = pathname === "/login";
 
-  useEffect(() => {
-    const authed =
-      typeof window !== "undefined" &&
-      localStorage.getItem("sk_boafo_auth") === "true";
+  // Login page — no shell (middleware already allows /login unauthenticated)
+  if (isLogin) return <>{children}</>;
 
-    if (!authed && !isLogin) {
-      router.replace("/login");
-    } else {
-      setReady(true);
-    }
-  }, [pathname, isLogin, router]);
-
-  // Avoid flash of layout while redirecting
-  if (!ready) {
+  // Wait for Convex Auth to hydrate before painting the dashboard shell
+  if (isLoading) {
     return (
       <div
         className="min-h-screen flex items-center justify-center"
@@ -44,10 +33,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Login page — no shell
-  if (isLogin) return <>{children}</>;
-
-  // Authenticated shell
   return (
     <div style={{ display: "flex", height: "100vh", overflow: "hidden" }}>
       <Sidebar />

@@ -47,17 +47,26 @@ pnpm start   # serve the production build
 pnpm lint    # ESLint
 ```
 
+## Deploy (Cloudflare Pages)
+
+`NEXT_PUBLIC_*` values are inlined at **build time**. In Cloudflare Pages → Settings → Environment variables (Production), set:
+
+| Variable | Value |
+| --- | --- |
+| `NEXT_PUBLIC_CONVEX_URL` | your Convex URL, e.g. `https://….convex.cloud` |
+| `NEXT_PUBLIC_CONVEX_SITE_URL` | your Convex site URL, e.g. `https://….convex.site` |
+
+Then **redeploy** (a new build is required — changing env alone does not update an existing deployment).
+
+Also set Convex backend `SITE_URL` to your live Pages URL (e.g. `https://your-project.pages.dev`):
+
+```bash
+pnpm exec convex env set SITE_URL=https://your-project.pages.dev
+```
+
 ## Demo sign-in
 
-Credentials are hardcoded for local preview. Click a row on the login screen to autofill, or use:
-
-| Name | Role | Email | Password |
-| --- | --- | --- | --- |
-| S.K. Boafo | Managing Partner | `sk.boafo@skboafo.gh` | `Chambers2026` |
-| Abena Mensah | Partner | `a.mensah@skboafo.gh` | `Chambers2026` |
-| Yaa Bonsu | Admin | `admin@skboafo.gh` | `Admin2026` |
-
-Sign-in writes `sk_boafo_auth` and `sk_boafo_user` to `localStorage`. Signing out clears them.
+Click a row on the login screen to autofill, or use credentials from the seed (e.g. `sk.boafo@skboafo.gh` / `Chambers2026`). Auth is handled by Convex Auth cookies — not `localStorage`.
 
 ## Project layout
 
