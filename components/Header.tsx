@@ -1,7 +1,10 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 import { Icon } from "./Icons";
 
 const PAGE_TITLES: Record<string, string> = {
@@ -16,12 +19,14 @@ const PAGE_TITLES: Record<string, string> = {
   "/announcements":       "Announcements",
   "/settings":            "Settings",
   "/leave":               "My Leave",
+  "/expense-claims":      "My Expenses",
   "/my-performance":      "My Performance",
   "/team-performance":    "Team Performance",
   "/attendance":          "My Attendance",
   "/files":               "My Files",
   "/messages":            "Messages",
-  "/training":            "Training",
+  "/training":            "My Training",
+  "/hr/training":         "Training Management",
   "/projects":            "All Projects",
   "/insights":            "Insights",
   "/hr/leave":            "Leave Register",
@@ -29,72 +34,87 @@ const PAGE_TITLES: Record<string, string> = {
   "/hr/attendance":       "Attendance",
 };
 
-type NotifType = "hearing" | "approval" | "invoice" | "case" | "staff";
+// ── notification type → icon / colour ────────────────────────────────────────
 
-interface Notification {
-  id: number;
-  type: NotifType;
-  title: string;
-  body: string;
-  time: string;
-  read: boolean;
+const NOTIF_ICON: Record<string, string> = {
+  leave_submitted:   "calendar",
+  leave_approved:    "check-circle",
+  leave_declined:    "x",
+  expense_submitted: "receipt",
+  expense_approved:  "check-circle",
+  expense_declined:  "x",
+  announcement:      "team",
+};
+
+const NOTIF_COLOR: Record<string, { bg: string; color: string }> = {
+  leave_submitted:   { bg: "#EFF4FF", color: "#1d4ed8" },
+  leave_approved:    { bg: "#ECFDF5", color: "#059669" },
+  leave_declined:    { bg: "#FFF5F5", color: "#DC2626" },
+  expense_submitted: { bg: "#FFFBEB", color: "#D97706" },
+  expense_approved:  { bg: "#ECFDF5", color: "#059669" },
+  expense_declined:  { bg: "#FFF5F5", color: "#DC2626" },
+  announcement:      { bg: "#F5F3FF", color: "#7C3AED" },
+};
+
+const FALLBACK_ICON  = { bg: "#F1F5F9", color: "#64748B" };
+
+// ── relative-time helper ──────────────────────────────────────────────────────
+
+function timeAgo(ms: number): string {
+  const diff = Date.now() - ms;
+  const mins  = Math.floor(diff / 60_000);
+  const hours = Math.floor(diff / 3_600_000);
+  const days  = Math.floor(diff / 86_400_000);
+  if (mins < 1)   return "Just now";
+  if (mins < 60)  return `${mins}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  if (days === 1) return "Yesterday";
+  return `${days}d ago`;
 }
 
-const INITIAL_NOTIFICATIONS: Notification[] = [
-  { id: 1, type: "hearing",  title: "Hearing reminder",  body: "Ofori & Sons Ltd. — 18 Sep at 9:00 AM, High Court Accra",              time: "Just now",  read: false },
-  { id: 2, type: "approval", title: "Approval needed",   body: "Amended Settlement Agreement — SKB-2026-047 awaiting review",           time: "2 hrs ago", read: false },
-  { id: 3, type: "invoice",  title: "Overdue invoice",   body: "INV-2026-038 — GHS 6,800 from Accra Realty Ltd. is 10 days overdue",    time: "1 day ago", read: false },
-  { id: 4, type: "case",     title: "Case assigned",     body: "SKB-2026-047 (Ofori & Sons) assigned to A. Mensah",                    time: "2 days ago", read: true  },
-  { id: 5, type: "staff",    title: "Staff meeting",     body: "Firm-wide mandatory meeting — Fri 19 Sep at 4:00 PM",                  time: "6 days ago", read: true  },
-];
-
-const NOTIF_ICON: Record<NotifType, "calendar" | "check-circle" | "receipt" | "briefcase" | "team"> = {
-  hearing:  "calendar",
-  approval: "check-circle",
-  invoice:  "receipt",
-  case:     "briefcase",
-  staff:    "team",
-};
-
-const NOTIF_COLOR: Record<NotifType, { bg: string; color: string }> = {
-  hearing:  { bg: "#EFF4FF", color: "#1d4ed8" },
-  approval: { bg: "#ECFDF5", color: "#059669" },
-  invoice:  { bg: "#FFF5F5", color: "#DC2626" },
-  case:     { bg: "#F5F3FF", color: "#7C3AED" },
-  staff:    { bg: "#FFFBEB", color: "#D97706" },
-};
+// ── component ─────────────────────────────────────────────────────────────────
 
 export default function Header() {
   const pathname = usePathname();
-  const title = PAGE_TITLES[pathname] ?? "SK Boafo Dashboard";
-  const today = new Date().toLocaleDateString("en-GH", {
+  const router   = useRouter();
+  const title    = PAGE_TITLES[pathname] ?? "SK Boafo Dashboard";
+  const today    = new Date().toLocaleDateString("en-GH", {
     weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
+    year:    "numeric",
+    month:   "long",
+    day:     "numeric",
   });
 
-  const [notifOpen, setNotifOpen]         = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>(INITIAL_NOTIFICATIONS);
+  // ── Convex data ───────────────────────────────────────────────────────────
+  const notifications = useQuery(api.notifications.listMine) ?? [];
+  const unreadCount   = useQuery(api.notifications.unreadCount) ?? 0;
+  const markReadFn    = useMutation(api.notifications.markRead);
+  const markAllFn     = useMutation(api.notifications.markAllRead);
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  // ── local drawer state ────────────────────────────────────────────────────
+  const [notifOpen, setNotifOpen] = useState(false);
 
-  // Close drawer on Escape
+  // Close on Escape
   useEffect(() => {
     const handle = (e: KeyboardEvent) => { if (e.key === "Escape") setNotifOpen(false); };
     document.addEventListener("keydown", handle);
     return () => document.removeEventListener("keydown", handle);
   }, []);
 
-  // Lock body scroll when drawer is open
+  // Lock body scroll when open
   useEffect(() => {
     document.body.style.overflow = notifOpen ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
   }, [notifOpen]);
 
-  const markAll = () => setNotifications((ns) => ns.map((n) => ({ ...n, read: true })));
-  const markOne = (id: number) =>
-    setNotifications((ns) => ns.map((n) => (n.id === id ? { ...n, read: true } : n)));
+  // Click a notification: mark read + navigate
+  async function handleClick(id: Id<"notifications">, linkTo?: string) {
+    await markReadFn({ id });
+    if (linkTo) {
+      setNotifOpen(false);
+      router.push(linkTo);
+    }
+  }
 
   return (
     <>
@@ -136,17 +156,16 @@ export default function Header() {
               className="absolute -top-0.5 -right-0.5 min-w-[17px] h-[17px] rounded-full flex items-center justify-center text-[9px] font-bold text-white leading-none"
               style={{ background: "#DC2626" }}
             >
-              {unreadCount}
+              {unreadCount > 99 ? "99+" : unreadCount}
             </span>
           )}
         </button>
       </header>
 
       {/* ---------------------------------------------------------------- */}
-      {/* Notification sidebar drawer (fixed, full-height, slides from right) */}
+      {/* Notification drawer                                               */}
       {/* ---------------------------------------------------------------- */}
 
-      {/* Backdrop */}
       {notifOpen && (
         <div
           className="fixed inset-0 z-40"
@@ -155,7 +174,6 @@ export default function Header() {
         />
       )}
 
-      {/* Drawer panel */}
       <div
         className="fixed top-0 right-0 h-full z-50 flex flex-col bg-white"
         style={{
@@ -198,9 +216,11 @@ export default function Header() {
         {/* Mark all as read */}
         {unreadCount > 0 && (
           <div className="px-5 py-2.5 flex items-center justify-between border-b border-[#F1F5F9] bg-[#FAFBFC] flex-shrink-0">
-            <p className="text-[11px] text-[#94A3B8]">{unreadCount} unread notification{unreadCount > 1 ? "s" : ""}</p>
+            <p className="text-[11px] text-[#94A3B8]">
+              {unreadCount} unread notification{unreadCount !== 1 ? "s" : ""}
+            </p>
             <button
-              onClick={markAll}
+              onClick={() => markAllFn({})}
               className="text-[11px] font-semibold text-[#0B2349] hover:underline"
             >
               Mark all as read
@@ -210,46 +230,57 @@ export default function Header() {
 
         {/* Notification list */}
         <div className="flex-1 overflow-y-auto">
-          {notifications.map((n) => {
-            const nc = NOTIF_COLOR[n.type];
-            return (
-              <button
-                key={n.id}
-                onClick={() => markOne(n.id)}
-                className="w-full flex items-start gap-3 px-5 py-4 text-left border-b border-[#F8FAFC] last:border-0 transition-colors"
-                style={{ background: n.read ? "white" : "#F8FBFF" }}
-              >
-                <div
-                  className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5"
-                  style={{ background: nc.bg }}
+          {notifications.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full gap-3 text-center px-8">
+              <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ background: "#F1F5F9" }}>
+                <Icon name="bell" className="w-5 h-5 text-[#94A3B8]" />
+              </div>
+              <p className="text-[13px] font-medium text-[#64748B]">No notifications yet</p>
+              <p className="text-[11px] text-[#94A3B8]">Leave approvals, expense decisions, and announcements will appear here.</p>
+            </div>
+          ) : (
+            notifications.map((n) => {
+              const nc = NOTIF_COLOR[n.type] ?? FALLBACK_ICON;
+              const iconName = NOTIF_ICON[n.type] ?? "bell";
+              return (
+                <button
+                  key={n._id}
+                  onClick={() => handleClick(n._id, n.linkTo)}
+                  className="w-full flex items-start gap-3 px-5 py-4 text-left border-b border-[#F8FAFC] last:border-0 transition-colors hover:bg-[#FAFBFC]"
+                  style={{ background: n.read ? "white" : "#F8FBFF" }}
                 >
-                  <Icon
-                    name={NOTIF_ICON[n.type]}
-                    className="w-[18px] h-[18px]"
-                    style={{ color: nc.color } as React.CSSProperties}
-                  />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className={`text-[12px] leading-snug ${n.read ? "text-[#64748B]" : "font-semibold text-[#1e293b]"}`}>
-                      {n.title}
-                    </p>
-                    {!n.read && (
-                      <span className="w-2 h-2 rounded-full flex-shrink-0 mt-1" style={{ background: "#DC2626" }} />
-                    )}
+                  <div
+                    className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5"
+                    style={{ background: nc.bg }}
+                  >
+                    <Icon
+                      name={iconName as any}
+                      className="w-[18px] h-[18px]"
+                      style={{ color: nc.color } as React.CSSProperties}
+                    />
                   </div>
-                  <p className="text-[11px] text-[#94A3B8] mt-0.5 leading-snug">{n.body}</p>
-                  <p className="text-[10px] text-[#C4C9D4] mt-1.5">{n.time}</p>
-                </div>
-              </button>
-            );
-          })}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className={`text-[12px] leading-snug ${n.read ? "text-[#64748B]" : "font-semibold text-[#1e293b]"}`}>
+                        {n.title}
+                      </p>
+                      {!n.read && (
+                        <span className="w-2 h-2 rounded-full flex-shrink-0 mt-1" style={{ background: "#DC2626" }} />
+                      )}
+                    </div>
+                    <p className="text-[11px] text-[#94A3B8] mt-0.5 leading-snug">{n.body}</p>
+                    <p className="text-[10px] text-[#C4C9D4] mt-1.5">{timeAgo(n._creationTime)}</p>
+                  </div>
+                </button>
+              );
+            })
+          )}
         </div>
 
         {/* Drawer footer */}
         <div className="px-5 py-4 border-t border-[#F1F5F9] bg-[#FAFBFC] flex-shrink-0">
           <button
-            onClick={() => setNotifOpen(false)}
+            onClick={() => { setNotifOpen(false); router.push("/announcements"); }}
             className="w-full rounded-lg py-2 text-[12px] font-medium text-[#0B2349] hover:bg-[#EFF4FF] transition-colors border border-[#E2E8F0]"
           >
             View all announcements

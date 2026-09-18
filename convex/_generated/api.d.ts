@@ -21,8 +21,11 @@ import type * as jobApplicants from "../jobApplicants.js";
 import type * as jobPostings from "../jobPostings.js";
 import type * as leave from "../leave.js";
 import type * as messages from "../messages.js";
+import type * as notifications from "../notifications.js";
 import type * as onboardees from "../onboardees.js";
+import type * as performance from "../performance.js";
 import type * as seed from "../seed.js";
+import type * as training from "../training.js";
 import type * as users from "../users.js";
 
 import type {
@@ -45,8 +48,11 @@ declare const fullApi: ApiFromModules<{
   jobPostings: typeof jobPostings;
   leave: typeof leave;
   messages: typeof messages;
+  notifications: typeof notifications;
   onboardees: typeof onboardees;
+  performance: typeof performance;
   seed: typeof seed;
+  training: typeof training;
   users: typeof users;
 }>;
 

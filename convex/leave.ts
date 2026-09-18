@@ -2,6 +2,16 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
+// ── helpers ────────────────────────────────────────────────────────────────────
+
+/** Returns all users whose role is managing_partner or hr_officer. */
+async function getApprovers(ctx: { db: any }) {
+  const all = await ctx.db.query("users").collect();
+  return (all as any[]).filter(
+    (u) => u.role === "managing_partner" || u.role === "hr_officer"
+  );
+}
+
 // ── listMine — leave requests for the logged-in employee ────────────────────
 
 export const listMine = query({
@@ -42,9 +52,11 @@ export const create = mutation({
     const user = await ctx.db.get(userId);
     if (!user) throw new Error("User not found");
 
-    return await ctx.db.insert("leaveRequests", {
+    const employeeName = user.name ?? user.email ?? "Unknown";
+
+    const id = await ctx.db.insert("leaveRequests", {
       employeeId: userId,
-      employeeName: user.name ?? user.email ?? "Unknown",
+      employeeName,
       role: user.role ?? "associate",
       type: args.type,
       from: args.from,
@@ -52,8 +64,29 @@ export const create = mutation({
       days: args.days,
       reason: args.reason,
       status: "Pending",
-      appliedDate: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
+      appliedDate: new Date().toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      }),
     });
+
+    // Notify all HR officers and managing partners
+    const approvers = await getApprovers(ctx);
+    await Promise.all(
+      approvers.map((a) =>
+        ctx.db.insert("notifications", {
+          recipientId: a._id,
+          type: "leave_submitted",
+          title: "Leave request submitted",
+          body: `${employeeName} has applied for ${args.days} day${args.days !== 1 ? "s" : ""} of ${args.type} leave (${args.from} – ${args.to}).`,
+          read: false,
+          linkTo: "/hr/leave",
+        })
+      )
+    );
+
+    return id;
   },
 });
 
@@ -68,13 +101,24 @@ export const approve = mutation({
     const approverName = approver?.name ?? approver?.email ?? "Manager";
 
     await Promise.all(
-      ids.map((id) =>
-        ctx.db.patch(id, {
+      ids.map(async (id) => {
+        const req = await ctx.db.get(id);
+        await ctx.db.patch(id, {
           status: "Approved",
           approvedById: userId,
           approvedByName: approverName,
-        })
-      )
+        });
+        if (req) {
+          await ctx.db.insert("notifications", {
+            recipientId: req.employeeId,
+            type: "leave_approved",
+            title: "Leave approved",
+            body: `Your ${req.type} leave request (${req.from} – ${req.to}, ${req.days} day${req.days !== 1 ? "s" : ""}) has been approved by ${approverName}.`,
+            read: false,
+            linkTo: "/leave",
+          });
+        }
+      })
     );
   },
 });
@@ -90,13 +134,24 @@ export const decline = mutation({
     const approverName = approver?.name ?? approver?.email ?? "Manager";
 
     await Promise.all(
-      ids.map((id) =>
-        ctx.db.patch(id, {
+      ids.map(async (id) => {
+        const req = await ctx.db.get(id);
+        await ctx.db.patch(id, {
           status: "Declined",
           approvedById: userId,
           approvedByName: approverName,
-        })
-      )
+        });
+        if (req) {
+          await ctx.db.insert("notifications", {
+            recipientId: req.employeeId,
+            type: "leave_declined",
+            title: "Leave request declined",
+            body: `Your ${req.type} leave request (${req.from} – ${req.to}, ${req.days} day${req.days !== 1 ? "s" : ""}) was not approved by ${approverName}.`,
+            read: false,
+            linkTo: "/leave",
+          });
+        }
+      })
     );
   },
 });

@@ -225,7 +225,6 @@ export default defineSchema({
       done: v.boolean(),
       category: v.string(),
     })),
-    // Extended profile (filled during onboarding)
     personalEmail: v.optional(v.string()),
     personalPhone: v.optional(v.string()),
     address: v.optional(v.string()),
@@ -255,6 +254,53 @@ export default defineSchema({
     })),
   }).index("by_status", ["status"]),
 
+  // ── Performance Periods ────────────────────────────────────────────────────
+  performancePeriods: defineTable({
+    name: v.string(),
+    type: v.union(v.literal("monthly"), v.literal("quarterly"), v.literal("annually")),
+    startDate: v.string(),
+    endDate: v.string(),
+    status: v.union(v.literal("Active"), v.literal("Closed")),
+    createdById: v.id("users"),
+  }).index("by_status", ["status"]),
+
+  // ── Performance Reviews ────────────────────────────────────────────────────
+  performanceReviews: defineTable({
+    periodId: v.id("performancePeriods"),
+    employeeId: v.id("users"),
+    employeeName: v.string(),
+    reviewerId: v.optional(v.id("users")),
+    reviewerName: v.optional(v.string()),
+    billableHours: v.optional(v.number()),
+    billableHoursTarget: v.optional(v.number()),
+    casesHandled: v.optional(v.number()),
+    casesClosed: v.optional(v.number()),
+    overallScore: v.optional(v.number()),
+    kpis: v.optional(v.array(v.object({
+      name: v.string(),
+      target: v.number(),
+      actual: v.number(),
+      unit: v.optional(v.string()),
+    }))),
+    notes: v.optional(v.string()),
+    status: v.union(v.literal("Draft"), v.literal("Submitted")),
+  })
+    .index("by_period", ["periodId"])
+    .index("by_employee", ["employeeId"])
+    .index("by_period_employee", ["periodId", "employeeId"]),
+
+  // ── Notifications ──────────────────────────────────────────────────────────
+  notifications: defineTable({
+    recipientId: v.id("users"),
+    type: v.string(),
+    title: v.string(),
+    body: v.string(),
+    read: v.boolean(),
+    linkTo: v.optional(v.string()),
+  })
+    .index("by_recipient", ["recipientId"])
+    .index("by_recipient_read", ["recipientId", "read"]),
+
   // ── Expense Claims ─────────────────────────────────────────────────────────
   expenseClaims: defineTable({
     claimRef: v.string(),
@@ -273,4 +319,78 @@ export default defineSchema({
   })
     .index("by_employee", ["employeeId"])
     .index("by_status", ["status"]),
+
+  // ── Training Courses ───────────────────────────────────────────────────────
+  trainingCourses: defineTable({
+    title: v.string(),
+    provider: v.string(),
+    category: v.union(
+      v.literal("Legal"),
+      v.literal("HR"),
+      v.literal("Tech"),
+      v.literal("Compliance"),
+      v.literal("Other")
+    ),
+    durationHours: v.number(),
+    description: v.optional(v.string()),
+    targetRoles: v.optional(v.array(v.string())),
+    dueDate: v.optional(v.string()),
+    status: v.union(v.literal("Active"), v.literal("Archived")),
+    createdById: v.id("users"),
+    // ── course materials ──────────────────────────────────────────────────────
+    items: v.optional(v.array(v.object({
+      id: v.string(),
+      title: v.string(),
+      kind: v.union(
+        v.literal("link"),
+        v.literal("video_file"),
+        v.literal("document_file")
+      ),
+      url: v.optional(v.string()),
+      storageId: v.optional(v.string()),
+    }))),
+    // ── quiz ─────────────────────────────────────────────────────────────────
+    quiz: v.optional(v.object({
+      passMarkPercent: v.number(),
+      questions: v.array(v.object({
+        id: v.string(),
+        prompt: v.string(),
+        options: v.array(v.object({ id: v.string(), label: v.string() })),
+        correctOptionId: v.string(),
+      })),
+    })),
+  })
+    .index("by_status", ["status"])
+    .index("by_category", ["category"]),
+
+  // ── Training Enrollments ───────────────────────────────────────────────────
+  trainingEnrollments: defineTable({
+    courseId: v.id("trainingCourses"),
+    employeeId: v.id("users"),
+    employeeName: v.string(),
+    progress: v.number(),
+    status: v.union(
+      v.literal("Not Started"),
+      v.literal("In Progress"),
+      v.literal("Completed")
+    ),
+    enrolledDate: v.string(),
+    completedDate: v.optional(v.string()),
+    assignedById: v.optional(v.id("users")),
+  })
+    .index("by_employee", ["employeeId"])
+    .index("by_course", ["courseId"])
+    .index("by_course_employee", ["courseId", "employeeId"]),
+
+  // ── Training Quiz Attempts ─────────────────────────────────────────────────
+  trainingQuizAttempts: defineTable({
+    courseId: v.id("trainingCourses"),
+    employeeId: v.id("users"),
+    enrollmentId: v.id("trainingEnrollments"),
+    scorePercent: v.number(),
+    passed: v.boolean(),
+    answers: v.array(v.object({ questionId: v.string(), optionId: v.string() })),
+  })
+    .index("by_enrollment", ["enrollmentId"])
+    .index("by_employee_course", ["employeeId", "courseId"]),
 });

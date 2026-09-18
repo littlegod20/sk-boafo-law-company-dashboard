@@ -92,6 +92,26 @@ export const updateProfile = mutation({
   },
 });
 
+// ── selfSwitchRole — current user switches their own role ────────────────────
+
+export const selfSwitchRole = mutation({
+  args: {
+    role: v.union(
+      v.literal("managing_partner"),
+      v.literal("partner"),
+      v.literal("associate"),
+      v.literal("paralegal"),
+      v.literal("admin"),
+      v.literal("hr_officer")
+    ),
+  },
+  handler: async (ctx, { role }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+    await ctx.db.patch(userId, { role });
+  },
+});
+
 // ── updateRole ───────────────────────────────────────────────────────────────
 
 export const updateRole = mutation({

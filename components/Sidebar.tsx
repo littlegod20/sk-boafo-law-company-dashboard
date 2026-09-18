@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
 import { Icon } from "./Icons";
 import { ConfirmDialog, Modal, FormField, ModalFooter, inputCls } from "./Modal";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuthActions } from "@convex-dev/auth/react";
 
@@ -13,11 +13,12 @@ import { useAuthActions } from "@convex-dev/auth/react";
 const PERSONAL_NAV = [
   { href: "/leave",            label: "My leave",        icon: "umbrella" as const },
   { href: "/my-performance",   label: "My performance",  icon: "trending-up" as const },
+  { href: "/expense-claims",   label: "My expenses",     icon: "receipt" as const },
   { href: "/attendance",       label: "My attendance",   icon: "clock" as const },
   { href: "/files",            label: "My files",        icon: "folder" as const },
   { href: "/messages",         label: "Messages",        icon: "message-square" as const },
   { href: "/announcements",    label: "Announcements",   icon: "bell" as const, badge: 2 },
-  { href: "/training",         label: "Training",        icon: "book-open" as const },
+  { href: "/training",         label: "My Training",     icon: "book-open" as const },
 ];
 
 const APPROVALS_ITEM = { href: "/approvals", label: "Approvals", icon: "check-circle" as const, badge: 5 };
@@ -74,12 +75,13 @@ const HR_NAV_MAIN = [
   { href: "/leave",            label: "My leave",         icon: "umbrella" as const },
   { href: "/my-performance",   label: "My performance",   icon: "trending-up" as const },
   { href: "/team-performance", label: "Team performance", icon: "team" as const },
+  { href: "/expense-claims",   label: "My expenses",      icon: "receipt" as const },
   { href: "/attendance",       label: "My attendance",    icon: "clock" as const },
   { href: "/files",            label: "My files",         icon: "folder" as const },
   { href: "/messages",         label: "Messages",         icon: "message-square" as const },
   { href: "/approvals",        label: "Approvals",        icon: "check-circle" as const, badge: 5 },
   { href: "/announcements",    label: "Announcements",    icon: "bell" as const, badge: 2 },
-  { href: "/training",         label: "Training",         icon: "book-open" as const },
+  { href: "/training",         label: "My Training",      icon: "book-open" as const },
 ];
 
 const HR_PROJECTS = [
@@ -95,6 +97,7 @@ const HR_SECTION = [
   { href: "/hr/onboarding",     label: "Onboarding",      icon: "check-circle" as const },
   { href: "/hr/exit-clearance", label: "Exit clearance",  icon: "log-out" as const },
   { href: "/hr/expense-claims", label: "Expense claims",  icon: "receipt" as const },
+  { href: "/hr/training",       label: "Training",         icon: "book-open" as const },
 ];
 
 const ROLES = [
@@ -172,7 +175,8 @@ export default function Sidebar() {
   const { signOut } = useAuthActions();
 
   // Live user from Convex
-  const dbUser = useQuery(api.users.getCurrentUser);
+  const dbUser        = useQuery(api.users.getCurrentUser);
+  const selfSwitchRole = useMutation(api.users.selfSwitchRole);
 
   const [activeRole, setActiveRole]         = useState("managing_partner");
   const [roleOpen, setRoleOpen]             = useState(false);
@@ -335,7 +339,12 @@ export default function Sidebar() {
                 {ROLES.map((r) => (
                   <button
                     key={r.id}
-                    onClick={() => { setActiveRole(r.id); setRoleOpen(false); }}
+                    onClick={() => {
+                      setActiveRole(r.id);
+                      setRoleOpen(false);
+                      // Persist role change to DB so the whole app reflects it
+                      selfSwitchRole({ role: r.id as any }).catch(console.error);
+                    }}
                     className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-white/10 transition-colors"
                   >
                     <span className="w-2 h-2 rounded-full" style={{ background: r.color }} />

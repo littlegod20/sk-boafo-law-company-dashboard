@@ -2,6 +2,15 @@ import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { mutation, query } from "./_generated/server";
 
+// ── helpers ────────────────────────────────────────────────────────────────────
+
+async function getApprovers(ctx: { db: any }) {
+  const all = await ctx.db.query("users").collect();
+  return (all as any[]).filter(
+    (u) => u.role === "managing_partner" || u.role === "hr_officer"
+  );
+}
+
 // ── list (all, for managers/HR) ───────────────────────────────────────────────
 
 export const list = query({
@@ -63,10 +72,12 @@ export const create = mutation({
       hr_officer:       "HR Officer",
     };
 
-    return await ctx.db.insert("expenseClaims", {
+    const employeeName = user.name ?? user.email ?? "Unknown";
+
+    const id = await ctx.db.insert("expenseClaims", {
       claimRef,
       employeeId: userId,
-      employeeName: user.name ?? user.email ?? "Unknown",
+      employeeName,
       role: ROLE_LABELS[user.role ?? "associate"] ?? user.role ?? "Staff",
       category: args.category,
       amount: args.amount,
@@ -76,6 +87,23 @@ export const create = mutation({
       status: "Pending",
       receipt: args.receipt,
     });
+
+    // Notify all HR officers and managing partners
+    const approvers = await getApprovers(ctx);
+    await Promise.all(
+      approvers.map((a) =>
+        ctx.db.insert("notifications", {
+          recipientId: a._id,
+          type: "expense_submitted",
+          title: "Expense claim submitted",
+          body: `${employeeName} submitted a ${args.category} expense claim for GHS ${args.amount.toLocaleString()} (${claimRef}).`,
+          read: false,
+          linkTo: "/hr/expense-claims",
+        })
+      )
+    );
+
+    return id;
   },
 });
 
@@ -91,11 +119,22 @@ export const approve = mutation({
       approverName = approver?.name ?? approver?.email ?? "HR";
     }
     for (const id of ids) {
+      const claim = await ctx.db.get(id);
       await ctx.db.patch(id, {
         status: "Approved",
         approvedById: userId ?? undefined,
         approvedByName: approverName,
       });
+      if (claim) {
+        await ctx.db.insert("notifications", {
+          recipientId: claim.employeeId,
+          type: "expense_approved",
+          title: "Expense claim approved",
+          body: `Your ${claim.category} expense claim (${claim.claimRef}) for GHS ${claim.amount.toLocaleString()} has been approved by ${approverName}.`,
+          read: false,
+          linkTo: "/expense-claims",
+        });
+      }
     }
   },
 });
@@ -112,11 +151,22 @@ export const decline = mutation({
       approverName = approver?.name ?? approver?.email ?? "HR";
     }
     for (const id of ids) {
+      const claim = await ctx.db.get(id);
       await ctx.db.patch(id, {
         status: "Declined",
         approvedById: userId ?? undefined,
         approvedByName: approverName,
       });
+      if (claim) {
+        await ctx.db.insert("notifications", {
+          recipientId: claim.employeeId,
+          type: "expense_declined",
+          title: "Expense claim declined",
+          body: `Your ${claim.category} expense claim (${claim.claimRef}) for GHS ${claim.amount.toLocaleString()} was not approved by ${approverName}.`,
+          read: false,
+          linkTo: "/expense-claims",
+        });
+      }
     }
   },
 });
