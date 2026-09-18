@@ -26,7 +26,7 @@ const CATEGORIES = [
   "Other",
 ];
 
-const FILTERS = ["All", "Pending", "Approved", "Declined"];
+const STATUS_FILTERS = ["All", "Pending", "Approved", "Declined"];
 
 export default function ExpenseClaimsPage() {
   const claims      = useQuery(api.expenseClaims.list) ?? [];
@@ -35,7 +35,18 @@ export default function ExpenseClaimsPage() {
   const approveFn   = useMutation(api.expenseClaims.approve);
   const declineFn   = useMutation(api.expenseClaims.decline);
 
-  const [filter,         setFilter]         = useState("All");
+  // ── Status filter ──────────────────────────────────────────────────────────
+  const [statusFilter,   setStatusFilter]   = useState("All");
+
+  // ── Extra filters ──────────────────────────────────────────────────────────
+  const [nameSearch,     setNameSearch]     = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [dateFrom,       setDateFrom]       = useState("");
+  const [dateTo,         setDateTo]         = useState("");
+  const [amountMin,      setAmountMin]      = useState("");
+  const [amountMax,      setAmountMax]      = useState("");
+
+  // ── Bulk / pagination ──────────────────────────────────────────────────────
   const [page,           setPage]           = useState(1);
   const [selected,       setSelected]       = useState<Set<string>>(new Set());
   const [showNew,        setShowNew]        = useState(false);
@@ -46,7 +57,34 @@ export default function ExpenseClaimsPage() {
   const [actioning,      setActioning]      = useState(false);
   const [form,           setForm]           = useState({ category: "", amount: "", date: "", description: "", receipt: false });
 
-  const filtered   = claims.filter((c) => filter === "All" || c.status === filter);
+  const hasExtraFilters = nameSearch || categoryFilter || dateFrom || dateTo || amountMin || amountMax;
+
+  function resetFilters() {
+    setStatusFilter("All");
+    setNameSearch("");
+    setCategoryFilter("");
+    setDateFrom("");
+    setDateTo("");
+    setAmountMin("");
+    setAmountMax("");
+    setPage(1);
+    setSelected(new Set());
+  }
+
+  function resetPagination() { setPage(1); setSelected(new Set()); }
+
+  // ── Filtering logic ────────────────────────────────────────────────────────
+  const filtered = claims.filter((c) => {
+    if (statusFilter !== "All" && c.status !== statusFilter) return false;
+    if (nameSearch && !c.employeeName.toLowerCase().includes(nameSearch.toLowerCase())) return false;
+    if (categoryFilter && c.category !== categoryFilter) return false;
+    if (amountMin && c.amount < parseFloat(amountMin)) return false;
+    if (amountMax && c.amount > parseFloat(amountMax)) return false;
+    if (dateFrom && c.date < dateFrom) return false;
+    if (dateTo && c.date > dateTo) return false;
+    return true;
+  });
+
   const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const pageIds    = paginated.map((c) => c._id);
   const allPageSelected  = pageIds.length > 0 && pageIds.every((id) => selected.has(id));
@@ -125,7 +163,7 @@ export default function ExpenseClaimsPage() {
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: "Total Claims",    value: String(claims.length),                    icon: "list" as const,         color: "#0B2349", bg: "#EFF4FF" },
+          { label: "Total Claims",    value: String(claims.length),                    icon: "layers" as const,       color: "#0B2349", bg: "#EFF4FF" },
           { label: "Pending",         value: String(pendingClaims.length),              icon: "clock" as const,        color: "#D97706", bg: "#FFFBEB" },
           { label: "Approved Amount", value: `GH₵ ${totalApproved.toLocaleString()}`,  icon: "check-circle" as const, color: "#059669", bg: "#ECFDF5" },
           { label: "Pending Amount",  value: `GH₵ ${pendingAmount.toLocaleString()}`,  icon: "briefcase" as const,    color: "#DC2626", bg: "#FFF5F5" },
@@ -142,15 +180,102 @@ export default function ExpenseClaimsPage() {
         ))}
       </div>
 
-      {/* Filters */}
+      {/* Status filter pills */}
       <div className="flex items-center gap-2 flex-wrap">
-        {FILTERS.map((f) => (
-          <button key={f} onClick={() => { setFilter(f); setPage(1); setSelected(new Set()); }}
+        {STATUS_FILTERS.map((f) => (
+          <button key={f} onClick={() => { setStatusFilter(f); resetPagination(); }}
             className="rounded-lg px-3 py-1.5 text-[12px] font-medium transition-colors"
-            style={filter === f ? { background: "#0B2349", color: "white" } : { background: "white", color: "#64748B", border: "1px solid #E2E8F0" }}>
+            style={statusFilter === f ? { background: "#0B2349", color: "white" } : { background: "white", color: "#64748B", border: "1px solid #E2E8F0" }}>
             {f}
           </button>
         ))}
+      </div>
+
+      {/* Advanced filters row */}
+      <div className="flex items-center gap-3 flex-wrap">
+        {/* Name search */}
+        <div className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 bg-white border border-[#E2E8F0] w-52">
+          <Icon name="search" className="w-3.5 h-3.5 text-[#94A3B8] flex-shrink-0" strokeWidth={2} />
+          <input
+            type="text"
+            placeholder="Search by name…"
+            className="flex-1 bg-transparent text-[12px] text-[#1e293b] placeholder-[#94A3B8] outline-none min-w-0"
+            value={nameSearch}
+            onChange={(e) => { setNameSearch(e.target.value); resetPagination(); }}
+          />
+          {nameSearch && (
+            <button onClick={() => { setNameSearch(""); resetPagination(); }}>
+              <Icon name="x" className="w-3 h-3 text-[#94A3B8]" strokeWidth={2.5} />
+            </button>
+          )}
+        </div>
+
+        {/* Category */}
+        <select
+          value={categoryFilter}
+          onChange={(e) => { setCategoryFilter(e.target.value); resetPagination(); }}
+          className={"rounded-lg border border-[#E2E8F0] px-2.5 py-1.5 text-[12px] text-[#1e293b] bg-white outline-none focus:ring-2 focus:ring-[#0B2349]/20 focus:border-[#0B2349] w-32"}
+        >
+          <option value="">All Categories</option>
+          {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+        </select>
+
+        {/* Amount range */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-[11px] text-[#94A3B8] font-medium whitespace-nowrap">Amount</span>
+          <input
+            type="number"
+            min="0"
+            placeholder="Min"
+            value={amountMin}
+            onChange={(e) => { setAmountMin(e.target.value); resetPagination(); }}
+            className={inputCls + " w-24"}
+          />
+          <span className="text-[11px] text-[#94A3B8]">–</span>
+          <input
+            type="number"
+            min="0"
+            placeholder="Max"
+            value={amountMax}
+            onChange={(e) => { setAmountMax(e.target.value); resetPagination(); }}
+            className={inputCls + " w-24"}
+          />
+        </div>
+
+        {/* Date range */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-[11px] text-[#94A3B8] font-medium whitespace-nowrap">Date from</span>
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => { setDateFrom(e.target.value); resetPagination(); }}
+            className={inputCls + " w-32"}
+          />
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[11px] text-[#94A3B8] font-medium">to</span>
+          <input
+            type="date"
+            value={dateTo}
+            min={dateFrom || undefined}
+            onChange={(e) => { setDateTo(e.target.value); resetPagination(); }}
+            className={inputCls + " w-32"}
+          />
+        </div>
+
+        {/* Clear all */}
+        {hasExtraFilters && (
+          <button onClick={resetFilters}
+            className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12px] font-medium border border-[#E2E8F0] hover:bg-[#F8FAFC] transition-colors"
+            style={{ color: "#64748B" }}>
+            <Icon name="x" className="w-3 h-3" strokeWidth={2.5} /> Clear filters
+          </button>
+        )}
+
+        {/* Result count */}
+        {(hasExtraFilters || statusFilter !== "All") && (
+          <span className="text-[11px] text-[#94A3B8] ml-auto">{filtered.length} result{filtered.length !== 1 ? "s" : ""}</span>
+        )}
       </div>
 
       {/* Bulk toolbar */}
@@ -214,7 +339,7 @@ export default function ExpenseClaimsPage() {
             })}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-5 py-16 text-center text-[12px] text-[#94A3B8]">No expense claims found.</td>
+                <td colSpan={8} className="px-5 py-16 text-center text-[12px] text-[#94A3B8]">No expense claims match the current filters.</td>
               </tr>
             )}
           </tbody>
@@ -235,7 +360,6 @@ export default function ExpenseClaimsPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Auto-filled employee info */}
             {me && (
               <div className="flex items-center gap-3 rounded-lg px-3 py-2.5 bg-[#F8FAFC]">
                 <div className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold" style={{ background: "#EFF4FF", color: "#0B2349" }}>

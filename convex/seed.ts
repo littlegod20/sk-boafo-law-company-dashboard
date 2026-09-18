@@ -238,15 +238,53 @@ export const seed = internalMutation({
     }
 
     // ── Job Applicants ─────────────────────────────────────────────────────────
+    // cvUrl uses a publicly accessible sample PDF for demo purposes.
+    // In production these would be Convex file storage URLs.
+    const CV = "https://www.w3.org/WAI/WCAG21/Techniques/pdf/sample.pdf";
+
     const applicantDefs = [
-      { jobRef: "REC-2026-009", name: "Adwoa Osei",        email: "adwoa.osei@gmail.com",   appliedDate: "04 Sep 2026", status: "Interview"   as const },
-      { jobRef: "REC-2026-009", name: "Kweku Frimpong",     email: "kweku.f@outlook.com",    appliedDate: "05 Sep 2026", status: "Shortlisted" as const },
-      { jobRef: "REC-2026-009", name: "Abena Twum",         email: undefined,                appliedDate: "06 Sep 2026", status: "Pending"     as const },
-      { jobRef: "REC-2026-008", name: "Nana Boateng",       email: "n.boateng@yahoo.com",    appliedDate: "11 Sep 2026", status: "Pending"     as const },
-      { jobRef: "REC-2026-008", name: "Kofi Darko",         email: "kofi.d@gmail.com",       appliedDate: "12 Sep 2026", status: "Shortlisted" as const },
-      { jobRef: "REC-2026-007", name: "Yaa Sarpong",        email: "yaa.s@gmail.com",        appliedDate: "13 Sep 2026", status: "Pending"     as const },
-      { jobRef: "REC-2026-006", name: "Ama Mensah",         email: "a.mensah@company.gh",    appliedDate: "22 Aug 2026", status: "Offered"     as const },
-      { jobRef: "REC-2026-005", name: "Efua Asante",        email: undefined,                appliedDate: "16 Aug 2026", status: "Interview"   as const },
+      // REC-2026-009 — Senior Associate, Litigation (Interviewing)
+      { jobRef: "REC-2026-009", name: "Adwoa Osei",          email: "adwoa.osei@gmail.com",       appliedDate: "02 Sep 2026", status: "Interview"   as const, cvUrl: CV         },
+      { jobRef: "REC-2026-009", name: "Kweku Frimpong",       email: "kweku.f@outlook.com",        appliedDate: "03 Sep 2026", status: "Interview"   as const, cvUrl: CV         },
+      { jobRef: "REC-2026-009", name: "Abena Twum",           email: "abena.twum@yahoo.com",       appliedDate: "04 Sep 2026", status: "Shortlisted" as const, cvUrl: CV         },
+      { jobRef: "REC-2026-009", name: "Samuel Boateng",       email: "sam.boateng@gmail.com",      appliedDate: "05 Sep 2026", status: "Shortlisted" as const, cvUrl: undefined  },
+      { jobRef: "REC-2026-009", name: "Efua Owusu",           email: undefined,                    appliedDate: "06 Sep 2026", status: "Pending"     as const, cvUrl: CV         },
+      { jobRef: "REC-2026-009", name: "Yaw Acheampong",       email: "yaw.a@company.gh",           appliedDate: "07 Sep 2026", status: "Rejected"    as const, cvUrl: undefined  },
+
+      // REC-2026-008 — Corporate Law Associate (Open)
+      { jobRef: "REC-2026-008", name: "Nana Boateng",         email: "n.boateng@yahoo.com",        appliedDate: "11 Sep 2026", status: "Pending"     as const, cvUrl: CV         },
+      { jobRef: "REC-2026-008", name: "Kofi Darko",           email: "kofi.d@gmail.com",           appliedDate: "12 Sep 2026", status: "Shortlisted" as const, cvUrl: CV         },
+      { jobRef: "REC-2026-008", name: "Akosua Asante",        email: "akosua.a@outlook.com",       appliedDate: "13 Sep 2026", status: "Pending"     as const, cvUrl: undefined  },
+      { jobRef: "REC-2026-008", name: "Yaw Mensah",           email: undefined,                    appliedDate: "14 Sep 2026", status: "Pending"     as const, cvUrl: CV         },
+
+      // REC-2026-007 — Paralegal, Conveyancing (Open)
+      { jobRef: "REC-2026-007", name: "Yaa Sarpong",          email: "yaa.s@gmail.com",            appliedDate: "13 Sep 2026", status: "Pending"     as const, cvUrl: CV         },
+      { jobRef: "REC-2026-007", name: "Kwame Osei",           email: "kwame.o@yahoo.com",          appliedDate: "14 Sep 2026", status: "Pending"     as const, cvUrl: undefined  },
+      { jobRef: "REC-2026-007", name: "Adwoa Acheampong",     email: "adwoa.ach@gmail.com",        appliedDate: "15 Sep 2026", status: "Pending"     as const, cvUrl: CV         },
+
+      // REC-2026-006 — HR Administrator (Offer Extended)
+      { jobRef: "REC-2026-006", name: "Ama Mensah",           email: "a.mensah@company.gh",        appliedDate: "22 Aug 2026", status: "Offered"     as const, cvUrl: CV         },
+      { jobRef: "REC-2026-006", name: "Kojo Asare",           email: "kojo.a@gmail.com",           appliedDate: "23 Aug 2026", status: "Rejected"    as const, cvUrl: CV         },
+      { jobRef: "REC-2026-006", name: "Nana Twum",            email: "nana.twum@outlook.com",      appliedDate: "25 Aug 2026", status: "Rejected"    as const, cvUrl: undefined  },
+
+      // REC-2026-005 — Legal Secretary (Interviewing)
+      { jobRef: "REC-2026-005", name: "Efua Asante",          email: "efua.a@gmail.com",           appliedDate: "16 Aug 2026", status: "Interview"   as const, cvUrl: CV         },
+      { jobRef: "REC-2026-005", name: "Abena Darko",          email: undefined,                    appliedDate: "17 Aug 2026", status: "Shortlisted" as const, cvUrl: CV         },
+      { jobRef: "REC-2026-005", name: "Kweku Boateng",        email: "kweku.b@yahoo.com",          appliedDate: "18 Aug 2026", status: "Pending"     as const, cvUrl: undefined  },
+      { jobRef: "REC-2026-005", name: "Ama Osei",             email: "ama.osei@gmail.com",         appliedDate: "19 Aug 2026", status: "Pending"     as const, cvUrl: CV         },
+
+      // REC-2026-004 — Associate, Family Law (Filled)
+      { jobRef: "REC-2026-004", name: "Akosua Frimpong",      email: "akosua.f@gmail.com",         appliedDate: "05 Jul 2026", status: "Offered"     as const, cvUrl: CV         },
+      { jobRef: "REC-2026-004", name: "Kofi Agyeman",         email: "k.agyeman@outlook.com",      appliedDate: "06 Jul 2026", status: "Rejected"    as const, cvUrl: CV         },
+      { jobRef: "REC-2026-004", name: "Yaa Boateng",          email: "yaa.b@yahoo.com",            appliedDate: "07 Jul 2026", status: "Rejected"    as const, cvUrl: undefined  },
+      { jobRef: "REC-2026-004", name: "Nana Mensah",          email: undefined,                    appliedDate: "08 Jul 2026", status: "Rejected"    as const, cvUrl: CV         },
+      { jobRef: "REC-2026-004", name: "Samuel Twum",          email: "s.twum@gmail.com",           appliedDate: "09 Jul 2026", status: "Rejected"    as const, cvUrl: undefined  },
+
+      // REC-2026-003 — IT Support Specialist (Closed)
+      { jobRef: "REC-2026-003", name: "Emmanuel Darko",       email: "e.darko@gmail.com",          appliedDate: "18 Jun 2026", status: "Rejected"    as const, cvUrl: CV         },
+      { jobRef: "REC-2026-003", name: "Kwame Boateng",        email: "kwame.b@yahoo.com",          appliedDate: "20 Jun 2026", status: "Rejected"    as const, cvUrl: undefined  },
+      { jobRef: "REC-2026-003", name: "Akua Mensah",          email: "akua.m@outlook.com",         appliedDate: "22 Jun 2026", status: "Rejected"    as const, cvUrl: CV         },
+      { jobRef: "REC-2026-003", name: "Kofi Asare",           email: undefined,                    appliedDate: "25 Jun 2026", status: "Rejected"    as const, cvUrl: undefined  },
     ];
 
     for (const a of applicantDefs) {
@@ -256,6 +294,7 @@ export const seed = internalMutation({
         email:       a.email,
         appliedDate: a.appliedDate,
         status:      a.status,
+        cvUrl:       a.cvUrl,
       });
     }
 

@@ -6,7 +6,15 @@ import { mutation, query } from "./_generated/server";
 export const list = query({
   args: {},
   handler: async (ctx) => {
-    return await ctx.db.query("jobPostings").order("desc").collect();
+    const jobs = await ctx.db.query("jobPostings").order("desc").collect();
+    const allApplicants = await ctx.db.query("jobApplicants").collect();
+
+    const countMap: Record<string, number> = {};
+    for (const a of allApplicants) {
+      countMap[a.jobId] = (countMap[a.jobId] ?? 0) + 1;
+    }
+
+    return jobs.map((j) => ({ ...j, applications: countMap[j._id] ?? 0 }));
   },
 });
 

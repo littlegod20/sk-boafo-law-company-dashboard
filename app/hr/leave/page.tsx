@@ -16,26 +16,88 @@ const STATUS_STYLE: Record<string, { bg: string; text: string }> = {
   Declined: { bg: "#FFF5F5", text: "#DC2626" },
 };
 
-const FILTER_OPTIONS = ["All", "Pending", "Approved", "Declined"];
+const STATUS_OPTIONS = ["All", "Pending", "Approved", "Declined"];
+
+const DURATION_OPTIONS = [
+  { label: "Any Duration", min: 0,  max: Infinity },
+  { label: "1–3 days",     min: 1,  max: 3        },
+  { label: "4–7 days",     min: 4,  max: 7        },
+  { label: "8–14 days",    min: 8,  max: 14       },
+  { label: "15+ days",     min: 15, max: Infinity },
+];
+
+// Parse "18 Sep 2026" → Date
+function parseDate(s: string): Date | null {
+  if (!s) return null;
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+const inputCls = "w-full rounded-lg border border-[#E2E8F0] px-2.5 py-1.5 text-[12px] text-[#1e293b] bg-white outline-none focus:ring-2 focus:ring-[#0B2349]/20 focus:border-[#0B2349]";
 
 export default function HRLeavePage() {
   // ── Convex ──────────────────────────────────────────────────────────────────
-  const requests    = useQuery(api.leave.listAll) ?? [];
-  const approveFn   = useMutation(api.leave.approve);
-  const declineFn   = useMutation(api.leave.decline);
+  const requests  = useQuery(api.leave.listAll) ?? [];
+  const approveFn = useMutation(api.leave.approve);
+  const declineFn = useMutation(api.leave.decline);
 
-  // ── State ────────────────────────────────────────────────────────────────────
-  const [filter,          setFilter]          = useState("All");
-  const [page,            setPage]            = useState(1);
-  const [selected,        setSelected]        = useState<Set<string>>(new Set());
-  const [confirmApprove,  setConfirmApprove]  = useState(false);
-  const [confirmDecline,  setConfirmDecline]  = useState(false);
+  // ── Filters ──────────────────────────────────────────────────────────────────
+  const [statusFilter,   setStatusFilter]   = useState("All");
+  const [nameSearch,     setNameSearch]     = useState("");
+  const [durationFilter, setDurationFilter] = useState(0); // index into DURATION_OPTIONS
+  const [dateFrom,       setDateFrom]       = useState("");
+  const [dateTo,         setDateTo]         = useState("");
 
-  const filtered  = requests.filter((r) => filter === "All" || r.status === filter);
+  // ── Bulk / pagination ─────────────────────────────────────────────────────────
+  const [page,           setPage]           = useState(1);
+  const [selected,       setSelected]       = useState<Set<string>>(new Set());
+  const [confirmApprove, setConfirmApprove] = useState(false);
+  const [confirmDecline, setConfirmDecline] = useState(false);
+
+  // ── Filtering logic ───────────────────────────────────────────────────────────
+  const dur = DURATION_OPTIONS[durationFilter];
+  const fromDate = dateFrom ? new Date(dateFrom) : null;
+  const toDate   = dateTo   ? new Date(dateTo)   : null;
+
+  const filtered = requests.filter((r) => {
+    if (statusFilter !== "All" && r.status !== statusFilter) return false;
+    if (nameSearch && !r.employeeName.toLowerCase().includes(nameSearch.toLowerCase())) return false;
+    if (durationFilter !== 0) {
+      if (r.days < dur.min || r.days > dur.max) return false;
+    }
+    if (fromDate || toDate) {
+      const applied = parseDate(r.appliedDate);
+      if (applied) {
+        if (fromDate && applied < fromDate) return false;
+        if (toDate) {
+          // include the full "to" day
+          const toEnd = new Date(toDate);
+          toEnd.setHours(23, 59, 59, 999);
+          if (applied > toEnd) return false;
+        }
+      }
+    }
+    return true;
+  });
+
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const pageIds   = paginated.map((r) => r._id as string);
   const allPageSelected  = pageIds.length > 0 && pageIds.every((id) => selected.has(id));
   const somePageSelected = pageIds.some((id) => selected.has(id));
+
+  const hasExtraFilters = nameSearch || durationFilter !== 0 || dateFrom || dateTo;
+
+  function resetFilters() {
+    setStatusFilter("All");
+    setNameSearch("");
+    setDurationFilter(0);
+    setDateFrom("");
+    setDateTo("");
+    setPage(1);
+    setSelected(new Set());
+  }
+
+  function resetPagination() { setPage(1); setSelected(new Set()); }
 
   function toggleAll() {
     setSelected((prev) => {
@@ -47,11 +109,7 @@ export default function HRLeavePage() {
   }
 
   function toggleRow(id: string) {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
+    setSelected((prev) => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; });
   }
 
   function getSelectedIds(): Id<"leaveRequests">[] {
@@ -78,7 +136,7 @@ export default function HRLeavePage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-[18px] font-bold text-[#0B2349]">Leave Register</h2>
-          <p className="text-[12px] text-[#94A3B8] mt-0.5">All leave requests across the firm</p>
+          <p className="text-[12px] text-[#94A3B8] mt-0.5">All leave requests across the firm · sorted by date applied</p>
         </div>
         {pendingCount > 0 && (
           <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-semibold" style={{ background: "#FFFBEB", color: "#D97706" }}>
@@ -88,18 +146,86 @@ export default function HRLeavePage() {
         )}
       </div>
 
-      {/* Filters */}
-      <div className="flex items-center gap-2">
-        {FILTER_OPTIONS.map((f) => (
-          <button
-            key={f}
-            onClick={() => { setFilter(f); setPage(1); setSelected(new Set()); }}
+      {/* Status filter pills */}
+      <div className="flex items-center gap-2 flex-wrap">
+        {STATUS_OPTIONS.map((f) => (
+          <button key={f}
+            onClick={() => { setStatusFilter(f); resetPagination(); }}
             className="rounded-lg px-3 py-1.5 text-[12px] font-medium transition-colors"
-            style={filter === f ? { background: "#0B2349", color: "white" } : { background: "white", color: "#64748B", border: "1px solid #E2E8F0" }}
-          >
+            style={statusFilter === f
+              ? { background: "#0B2349", color: "white" }
+              : { background: "white", color: "#64748B", border: "1px solid #E2E8F0" }}>
             {f}
           </button>
         ))}
+      </div>
+
+      {/* Advanced filters row */}
+      <div className="flex items-center gap-3 flex-wrap">
+        {/* Name search */}
+        <div className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 bg-white border border-[#E2E8F0] w-52">
+          <Icon name="search" className="w-3.5 h-3.5 text-[#94A3B8] flex-shrink-0" strokeWidth={2} />
+          <input
+            type="text"
+            placeholder="Search by name…"
+            className="flex-1 bg-transparent text-[12px] text-[#1e293b] placeholder-[#94A3B8] outline-none min-w-0"
+            value={nameSearch}
+            onChange={(e) => { setNameSearch(e.target.value); resetPagination(); }}
+          />
+          {nameSearch && (
+            <button onClick={() => { setNameSearch(""); resetPagination(); }}>
+              <Icon name="x" className="w-3 h-3 text-[#94A3B8]" strokeWidth={2.5} />
+            </button>
+          )}
+        </div>
+
+        {/* Duration */}
+        <select
+          value={durationFilter}
+          onChange={(e) => { setDurationFilter(Number(e.target.value)); resetPagination(); }}
+          className={"rounded-lg border border-[#E2E8F0] px-2.5 py-1.5 text-[12px] text-[#1e293b] bg-white outline-none focus:ring-2 focus:ring-[#0B2349]/20 focus:border-[#0B2349] w-32"}
+        >
+          {DURATION_OPTIONS.map((opt, i) => (
+            <option key={i} value={i}>{opt.label}</option>
+          ))}
+        </select>
+
+        {/* Date applied from */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-[11px] text-[#94A3B8] font-medium whitespace-nowrap">Applied from</span>
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => { setDateFrom(e.target.value); resetPagination(); }}
+            className={inputCls + " w-32"}
+          />
+        </div>
+
+        {/* Date applied to */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-[11px] text-[#94A3B8] font-medium">to</span>
+          <input
+            type="date"
+            value={dateTo}
+            min={dateFrom || undefined}
+            onChange={(e) => { setDateTo(e.target.value); resetPagination(); }}
+            className={inputCls + " w-32"}
+          />
+        </div>
+
+        {/* Clear all */}
+        {hasExtraFilters && (
+          <button onClick={resetFilters}
+            className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12px] font-medium border border-[#E2E8F0] hover:bg-[#F8FAFC] transition-colors"
+            style={{ color: "#64748B" }}>
+            <Icon name="x" className="w-3 h-3" strokeWidth={2.5} /> Clear filters
+          </button>
+        )}
+
+        {/* Result count when filtered */}
+        {(hasExtraFilters || statusFilter !== "All") && (
+          <span className="text-[11px] text-[#94A3B8] ml-auto">{filtered.length} result{filtered.length !== 1 ? "s" : ""}</span>
+        )}
       </div>
 
       {/* Bulk toolbar */}
@@ -130,6 +256,7 @@ export default function HRLeavePage() {
           <tbody>
             {paginated.map((r) => {
               const rid = r._id as string;
+              const ss  = STATUS_STYLE[r.status] ?? STATUS_STYLE.Pending;
               return (
                 <tr key={rid} className="border-t border-[#F8FAFC] hover:bg-[#FAFBFC] transition-colors" style={selected.has(rid) ? { background: "#EFF4FF" } : {}}>
                   <td className="pl-5 pr-3 py-3.5">
@@ -151,7 +278,7 @@ export default function HRLeavePage() {
                   <td className="px-3 py-3.5 font-semibold text-[#0B2349]">{r.days}d</td>
                   <td className="px-3 py-3.5 text-[#64748B] text-[12px]">{r.appliedDate}</td>
                   <td className="px-3 py-3.5">
-                    <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold" style={{ background: STATUS_STYLE[r.status].bg, color: STATUS_STYLE[r.status].text }}>
+                    <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold" style={{ background: ss.bg, color: ss.text }}>
                       {r.status}
                     </span>
                   </td>
@@ -161,15 +288,13 @@ export default function HRLeavePage() {
                         <button
                           onClick={() => { setSelected(new Set([rid])); setConfirmApprove(true); }}
                           className="rounded-lg px-2.5 py-1 text-[11px] font-semibold"
-                          style={{ background: "#ECFDF5", color: "#059669" }}
-                        >
+                          style={{ background: "#ECFDF5", color: "#059669" }}>
                           Approve
                         </button>
                         <button
                           onClick={() => { setSelected(new Set([rid])); setConfirmDecline(true); }}
                           className="rounded-lg px-2.5 py-1 text-[11px] font-semibold"
-                          style={{ background: "#FFF5F5", color: "#DC2626" }}
-                        >
+                          style={{ background: "#FFF5F5", color: "#DC2626" }}>
                           Decline
                         </button>
                       </div>
@@ -181,7 +306,7 @@ export default function HRLeavePage() {
             {filtered.length === 0 && (
               <tr>
                 <td colSpan={8} className="px-5 py-16 text-center text-[12px] text-[#94A3B8]">
-                  No leave requests found.
+                  No leave requests match the current filters.
                 </td>
               </tr>
             )}
@@ -190,8 +315,12 @@ export default function HRLeavePage() {
         <Pagination page={page} total={filtered.length} pageSize={PAGE_SIZE} onChange={(p) => { setPage(p); setSelected(new Set()); }} />
       </div>
 
-      <ConfirmDialog isOpen={confirmApprove} onClose={() => setConfirmApprove(false)} onConfirm={handleApprove} title="Approve leave?" message={`Approve leave for ${selected.size} request${selected.size !== 1 ? "s" : ""}?`} confirmLabel="Approve" variant="success" />
-      <ConfirmDialog isOpen={confirmDecline} onClose={() => setConfirmDecline(false)} onConfirm={handleDecline} title="Decline leave?" message={`Decline leave for ${selected.size} request${selected.size !== 1 ? "s" : ""}?`} confirmLabel="Decline" variant="danger" />
+      <ConfirmDialog isOpen={confirmApprove} onClose={() => setConfirmApprove(false)} onConfirm={handleApprove}
+        title="Approve leave?" message={`Approve leave for ${selected.size} request${selected.size !== 1 ? "s" : ""}?`}
+        confirmLabel="Approve" variant="success" />
+      <ConfirmDialog isOpen={confirmDecline} onClose={() => setConfirmDecline(false)} onConfirm={handleDecline}
+        title="Decline leave?" message={`Decline leave for ${selected.size} request${selected.size !== 1 ? "s" : ""}?`}
+        confirmLabel="Decline" variant="danger" />
     </div>
   );
 }
