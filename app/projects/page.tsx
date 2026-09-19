@@ -55,7 +55,7 @@ export default function ProjectsPage() {
     <div className="space-y-5 max-w-[1200px]">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-[18px] font-bold text-[#0B2349]">All Projects</h2>
+          <h2 className="text-[18px] font-bold text-[#0B2349]">Projects</h2>
           <p className="text-[12px] text-[#94A3B8] mt-0.5">{PROJECTS.length} projects · {active} active · {completed} completed</p>
         </div>
         <button className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-[13px] font-semibold text-white hover:opacity-90 transition-opacity" style={{ background: "#0B2349" }}>

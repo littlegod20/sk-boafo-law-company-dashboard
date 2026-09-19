@@ -60,11 +60,7 @@ const HR_NAV_MAIN = [
   { href: "/approvals",        label: "Approvals",        icon: "check-circle" as const, badge: 5 },
   { href: "/announcements",    label: "Announcements",    icon: "bell" as const, badge: 2 },
   { href: "/training",         label: "My Training",      icon: "book-open" as const },
-];
-
-const HR_PROJECTS = [
-  { href: "/projects",  label: "All projects", icon: "layers" as const },
-  { href: "/insights",  label: "Insights",     icon: "bar-chart" as const },
+  { href: "/projects",         label: "Projects",         icon: "layers" as const },
 ];
 
 const HR_SECTION = [
@@ -160,7 +156,6 @@ export default function Sidebar() {
   const [collapsed, setCollapsed]           = useState(false);
   const [profileOpen, setProfileOpen]       = useState(false);
   const [confirmSignOut, setConfirmSignOut] = useState(false);
-  const [projectsOpen, setProjectsOpen]     = useState(true);
   const [hrSectionOpen, setHrSectionOpen]   = useState(true);
 
   // Modals
@@ -346,26 +341,6 @@ export default function Sidebar() {
             /* ── HR role nav ── */
             <>
               {HR_NAV_MAIN.map((item) => <NavLink key={item.href} item={item} pathname={pathname} collapsed={collapsed} />)}
-
-              {/* Projects group */}
-              {!collapsed && (
-                <button
-                  onClick={() => setProjectsOpen((o) => !o)}
-                  className="w-full flex items-center gap-3 rounded-lg px-3 py-2.5 mt-1 text-white/60 hover:text-white hover:bg-white/8 transition-colors"
-                >
-                  <Icon name="layers" className="w-[18px] h-[18px] flex-shrink-0" strokeWidth={1.75} />
-                  <span className="text-[13px] flex-1 text-left">Projects</span>
-                  <Icon
-                    name="chevron-down"
-                    className={`w-3.5 h-3.5 flex-shrink-0 transition-transform ${projectsOpen ? "rotate-180" : ""}`}
-                    strokeWidth={2.5}
-                    style={{ color: "rgba(255,255,255,0.4)" }}
-                  />
-                </button>
-              )}
-              {(collapsed || projectsOpen) && HR_PROJECTS.map((item) => (
-                <NavLink key={item.href} item={item} pathname={pathname} collapsed={collapsed} indent={!collapsed} />
-              ))}
 
               {/* HR group */}
               {!collapsed && (

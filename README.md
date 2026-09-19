@@ -1,6 +1,6 @@
 # S.K. Boafo & Company — People & HR Dashboard
 
-HR and people-operations dashboard for **S.K. Boafo & Company** (Gye Nyame Chambers). Staff manage leave, attendance, training, files, messages, and announcements; HR officers also run employees, recruitment, onboarding, exit clearance, projects, and insights.
+HR and people-operations dashboard for **S.K. Boafo & Company** (Gye Nyame Chambers). Staff manage leave, attendance, training, files, messages, and announcements; HR officers also run employees, recruitment, onboarding, exit clearance, and projects.
 
 Legal casework stays in the firm’s existing legal system — this app does not replace cases, clients, court calendar, billing, or legal documents.
 
@@ -8,7 +8,7 @@ Legal casework stays in the firm’s existing legal system — this app does not
 
 | Section | Route | What it covers |
 | --- | --- | --- |
-| Dashboard | `/` | HR home: pending leave, attendance snapshot, training, announcements, team |
+| Dashboard | `/` | HR overview: attendance rate, leave by type, headcount, quick stats |
 | Leave Approvals | `/approvals` | Approve / decline leave requests |
 | My Leave | `/leave` | Personal leave requests |
 | Leave Register | `/hr/leave` | Firm-wide leave (HR) |
@@ -21,7 +21,7 @@ Legal casework stays in the firm’s existing legal system — this app does not
 | Recruitment | `/hr/recruitment` | Job postings and applicants |
 | Onboarding | `/hr/onboarding` | New-hire checklists |
 | Exit clearance | `/hr/exit-clearance` | Leavers checklist |
-| Projects / Insights | `/projects`, `/insights` | HR officer only |
+| Projects | `/projects` | HR officer only |
 | Staff & Team | `/staff` | People roster (managing partner / admin) |
 | Settings | `/settings` | Preferences |
 

@@ -20,7 +20,7 @@ Give the firm a single place for **people operations**: leave, attendance, perfo
 | --- | --- |
 | Expenses / expense claims | Handled via third-party payroll / finance tools |
 | Cases, clients, court calendar, billing, legal documents | Existing legal CMS — do not rebuild |
-| Projects & Insights for non-HR roles | HR officer only |
+| Projects for non-HR roles | HR officer only |
 | Native App Store / Play Store apps | Web-first (responsive OK) |
 | Full payroll / payslips | External systems |
 
@@ -35,7 +35,7 @@ Give the firm a single place for **people operations**: leave, attendance, perfo
 | **associate** | Dashboard, personal modules |
 | **paralegal** | Dashboard, personal modules |
 | **admin** | Dashboard, Staff & Team, Approvals, personal modules |
-| **hr_officer** | Full HR nav: personal modules + Approvals + Leave register, Employees, Attendance (HR), Recruitment, Onboarding, Exit clearance, Training (HR), **Projects**, **Insights** |
+| **hr_officer** | Full HR nav: personal modules + Approvals + Leave register, Employees, Attendance (HR), Recruitment, Onboarding, Exit clearance, Training (HR), **Projects**; dashboard includes HR analytics |
 
 Approvers for leave: managing partner and HR officer (backend), plus Approvals UI for managing_partner / partner / admin / hr_officer via nav.
 
@@ -45,7 +45,7 @@ Approvers for leave: managing partner and HR officer (backend), plus Approvals U
 
 | Module | Routes | Notes |
 | --- | --- | --- |
-| Home dashboard | `/` | HR-oriented KPIs: pending leave, attendance snapshot, training, announcements, team |
+| Home dashboard | `/` | HR analytics overview: attendance rate, leave by type, headcount, quick stats |
 | Leave (staff) | `/leave` | Request and track own leave |
 | Leave approvals | `/approvals` | Leave-only queue (no legal/document/invoice mocks) |
 | Leave register | `/hr/leave` | Firm-wide leave (HR) |
@@ -59,7 +59,7 @@ Approvers for leave: managing partner and HR officer (backend), plus Approvals U
 | Recruitment | `/hr/recruitment` | Jobs + applicants (+ CV view planned) |
 | Onboarding | `/hr/onboarding` | Checklists; intern self-serve link planned |
 | Exit clearance | `/hr/exit-clearance` | Leavers checklist |
-| Projects / Insights | `/projects`, `/insights` | **hr_officer only** |
+| Projects | `/projects` | **hr_officer only** |
 | Staff & Team | `/staff` | Roster for managing_partner / admin (separate from `/hr/employees`) |
 | Settings | `/settings` | Preferences |
 
