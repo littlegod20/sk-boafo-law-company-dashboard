@@ -13,7 +13,6 @@ import { useAuthActions } from "@convex-dev/auth/react";
 const PERSONAL_NAV = [
   { href: "/leave",            label: "My leave",        icon: "umbrella" as const },
   { href: "/my-performance",   label: "My performance",  icon: "trending-up" as const },
-  { href: "/expense-claims",   label: "My expenses",     icon: "receipt" as const },
   { href: "/attendance",       label: "My attendance",   icon: "clock" as const },
   { href: "/files",            label: "My files",        icon: "folder" as const },
   { href: "/messages",         label: "Messages",        icon: "message-square" as const },
@@ -31,41 +30,21 @@ type NavItem = { href: string; label: string; icon: import("./Icons").IconName; 
 
 const WORK_NAV: Record<string, NavItem[]> = {
   managing_partner: [
-    { href: "/",          label: "Dashboard",       icon: "grid" },
-    { href: "/cases",     label: "Case Management", icon: "briefcase" },
-    { href: "/clients",   label: "Clients",         icon: "users" },
-    { href: "/calendar",  label: "Court Calendar",  icon: "calendar" },
-    { href: "/billing",   label: "Billing & Invoices", icon: "receipt" },
-    { href: "/documents", label: "Documents",       icon: "file-text" },
-    { href: "/staff",     label: "Staff & Team",    icon: "team" },
+    { href: "/",      label: "Dashboard",    icon: "grid" },
+    { href: "/staff", label: "Staff & Team", icon: "team" },
   ],
   partner: [
-    { href: "/",          label: "Dashboard",       icon: "grid" },
-    { href: "/cases",     label: "Case Management", icon: "briefcase" },
-    { href: "/clients",   label: "Clients",         icon: "users" },
-    { href: "/calendar",  label: "Court Calendar",  icon: "calendar" },
-    { href: "/billing",   label: "Billing & Invoices", icon: "receipt" },
-    { href: "/documents", label: "Documents",       icon: "file-text" },
+    { href: "/", label: "Dashboard", icon: "grid" },
   ],
   associate: [
-    { href: "/",          label: "Dashboard",       icon: "grid" },
-    { href: "/cases",     label: "Case Management", icon: "briefcase" },
-    { href: "/clients",   label: "Clients",         icon: "users" },
-    { href: "/calendar",  label: "Court Calendar",  icon: "calendar" },
-    { href: "/documents", label: "Documents",       icon: "file-text" },
+    { href: "/", label: "Dashboard", icon: "grid" },
   ],
   paralegal: [
-    { href: "/",          label: "Dashboard",       icon: "grid" },
-    { href: "/cases",     label: "Case Management", icon: "briefcase" },
-    { href: "/calendar",  label: "Court Calendar",  icon: "calendar" },
-    { href: "/documents", label: "Documents",       icon: "file-text" },
+    { href: "/", label: "Dashboard", icon: "grid" },
   ],
   admin: [
-    { href: "/",          label: "Dashboard",       icon: "grid" },
-    { href: "/clients",   label: "Clients",         icon: "users" },
-    { href: "/billing",   label: "Billing & Invoices", icon: "receipt" },
-    { href: "/documents", label: "Documents",       icon: "file-text" },
-    { href: "/staff",     label: "Staff & Team",    icon: "team" },
+    { href: "/",      label: "Dashboard",    icon: "grid" },
+    { href: "/staff", label: "Staff & Team", icon: "team" },
   ],
 };
 
@@ -75,7 +54,6 @@ const HR_NAV_MAIN = [
   { href: "/leave",            label: "My leave",         icon: "umbrella" as const },
   { href: "/my-performance",   label: "My performance",   icon: "trending-up" as const },
   { href: "/team-performance", label: "Team performance", icon: "team" as const },
-  { href: "/expense-claims",   label: "My expenses",      icon: "receipt" as const },
   { href: "/attendance",       label: "My attendance",    icon: "clock" as const },
   { href: "/files",            label: "My files",         icon: "folder" as const },
   { href: "/messages",         label: "Messages",         icon: "message-square" as const },
@@ -96,8 +74,7 @@ const HR_SECTION = [
   { href: "/hr/recruitment",    label: "Recruitment",     icon: "briefcase" as const },
   { href: "/hr/onboarding",     label: "Onboarding",      icon: "check-circle" as const },
   { href: "/hr/exit-clearance", label: "Exit clearance",  icon: "log-out" as const },
-  { href: "/hr/expense-claims", label: "Expense claims",  icon: "receipt" as const },
-  { href: "/hr/training",       label: "Training",         icon: "book-open" as const },
+  { href: "/hr/training",       label: "Training",        icon: "book-open" as const },
 ];
 
 const ROLES = [

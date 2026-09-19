@@ -45,51 +45,6 @@ export default defineSchema({
     .index("email", ["email"])
     .index("phone", ["phone"]),
 
-  // ── Clients ────────────────────────────────────────────────────────────────
-  clients: defineTable({
-    clientRef: v.string(),
-    name: v.string(),
-    type: v.union(v.literal("Corporate"), v.literal("Individual"), v.literal("Trust")),
-    contact: v.string(),
-    email: v.string(),
-    address: v.optional(v.string()),
-    company: v.optional(v.string()),
-    status: v.string(),
-    joined: v.string(),
-    attorney: v.string(),
-    activeCases: v.number(),
-    totalCases: v.number(),
-  })
-    .index("by_type", ["type"])
-    .index("by_ref", ["clientRef"]),
-
-  // ── Cases ──────────────────────────────────────────────────────────────────
-  cases: defineTable({
-    caseNumber: v.string(),
-    title: v.optional(v.string()),
-    clientId: v.id("clients"),
-    clientName: v.string(),
-    clientType: v.string(),
-    type: v.string(),
-    status: v.union(
-      v.literal("Active"),
-      v.literal("Pending"),
-      v.literal("On Hold"),
-      v.literal("Closed"),
-      v.literal("Settled")
-    ),
-    priority: v.union(v.literal("High"), v.literal("Medium"), v.literal("Low")),
-    attorney: v.string(),
-    leadAttorneyId: v.optional(v.id("users")),
-    nextHearing: v.optional(v.string()),
-    court: v.optional(v.string()),
-    openedDate: v.string(),
-    description: v.optional(v.string()),
-  })
-    .index("by_client", ["clientId"])
-    .index("by_status", ["status"])
-    .index("by_case_number", ["caseNumber"]),
-
   // ── Leave requests ─────────────────────────────────────────────────────────
   leaveRequests: defineTable({
     employeeId: v.id("users"),
@@ -107,38 +62,6 @@ export default defineSchema({
   })
     .index("by_employee", ["employeeId"])
     .index("by_status", ["status"]),
-
-  // ── Invoices ───────────────────────────────────────────────────────────────
-  invoices: defineTable({
-    invoiceNumber: v.string(),
-    clientId: v.id("clients"),
-    clientName: v.string(),
-    caseId: v.optional(v.id("cases")),
-    type: v.string(),
-    amount: v.number(),
-    status: v.union(
-      v.literal("Draft"),
-      v.literal("Sent"),
-      v.literal("Paid"),
-      v.literal("Overdue"),
-      v.literal("Disputed")
-    ),
-    issueDate: v.string(),
-    dueDate: v.string(),
-    attorney: v.string(),
-    description: v.optional(v.string()),
-    lineItems: v.optional(
-      v.array(v.object({
-        description: v.string(),
-        hours: v.optional(v.number()),
-        rate: v.optional(v.number()),
-        amount: v.number(),
-      }))
-    ),
-  })
-    .index("by_client", ["clientId"])
-    .index("by_status", ["status"])
-    .index("by_invoice_number", ["invoiceNumber"]),
 
   // ── Messages ───────────────────────────────────────────────────────────────
   messages: defineTable({
@@ -300,25 +223,6 @@ export default defineSchema({
   })
     .index("by_recipient", ["recipientId"])
     .index("by_recipient_read", ["recipientId", "read"]),
-
-  // ── Expense Claims ─────────────────────────────────────────────────────────
-  expenseClaims: defineTable({
-    claimRef: v.string(),
-    employeeId: v.id("users"),
-    employeeName: v.string(),
-    role: v.string(),
-    category: v.string(),
-    amount: v.number(),
-    date: v.string(),
-    submittedDate: v.string(),
-    description: v.string(),
-    status: v.union(v.literal("Pending"), v.literal("Approved"), v.literal("Declined")),
-    receipt: v.boolean(),
-    approvedById: v.optional(v.id("users")),
-    approvedByName: v.optional(v.string()),
-  })
-    .index("by_employee", ["employeeId"])
-    .index("by_status", ["status"]),
 
   // ── Training Courses ───────────────────────────────────────────────────────
   trainingCourses: defineTable({

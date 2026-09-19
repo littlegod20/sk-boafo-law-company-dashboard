@@ -13,9 +13,8 @@ export const seed = internalMutation({
       // Auth tables first (accounts reference users, sessions reference accounts)
       "authRefreshTokens", "authVerificationCodes", "authSessions", "authAccounts",
       // App tables
-      "announcements", "messages", "leaveRequests",
-      "invoices", "cases", "clients", "users",
-      "jobPostings", "jobApplicants", "onboardees", "exitClearances", "expenseClaims",
+      "announcements", "messages", "leaveRequests", "users",
+      "jobPostings", "jobApplicants", "onboardees", "exitClearances",
     ] as const;
 
     for (const table of tables) {
@@ -51,101 +50,6 @@ export const seed = internalMutation({
         isAnonymous: false,
       });
       userIds[u.email] = id;
-    }
-
-    // ── Clients ──────────────────────────────────────────────────────────────
-    const clientDefs = [
-      { clientRef: "CLT-001", name: "Ofori & Sons Ltd.",    type: "Corporate"  as const, contact: "+233 20 811 4401", email: "info@oforiandson.gh",       attorney: "A. Mensah", activeCases: 3, totalCases: 5, joined: "Mar 2022" },
-      { clientRef: "CLT-002", name: "Adwoa Boateng",        type: "Individual" as const, contact: "+233 24 552 7703", email: "adwoa.b@gmail.com",          attorney: "K. Asante", activeCases: 1, totalCases: 2, joined: "Jan 2024" },
-      { clientRef: "CLT-003", name: "Ghana Mining Co.",     type: "Corporate"  as const, contact: "+233 30 274 1100", email: "legal@ghanamining.com",      attorney: "E. Darko",  activeCases: 2, totalCases: 4, joined: "Jun 2021" },
-      { clientRef: "CLT-004", name: "Kofi Agyeman",         type: "Individual" as const, contact: "+233 27 315 8890", email: "k.agyeman@outlook.com",      attorney: "A. Mensah", activeCases: 1, totalCases: 1, joined: "Aug 2026" },
-      { clientRef: "CLT-005", name: "Accra Realty Ltd.",    type: "Corporate"  as const, contact: "+233 30 278 4450", email: "admin@accra-realty.gh",      attorney: "D. Owusu",  activeCases: 1, totalCases: 3, joined: "Sep 2020" },
-      { clientRef: "CLT-006", name: "Yaa Asantewaa Trust",  type: "Trust"      as const, contact: "+233 32 204 7700", email: "trust@yaaasantewaa.org",     attorney: "K. Asante", activeCases: 0, totalCases: 2, joined: "Nov 2019" },
-      { clientRef: "CLT-007", name: "TeleFlex Ghana",       type: "Corporate"  as const, contact: "+233 30 291 2233", email: "legal@teleflex.gh",          attorney: "E. Darko",  activeCases: 1, totalCases: 2, joined: "Feb 2023" },
-      { clientRef: "CLT-008", name: "Kwame Osei",           type: "Individual" as const, contact: "+233 26 448 1122", email: "kwameosei.law@yahoo.com",    attorney: "D. Owusu",  activeCases: 1, totalCases: 1, joined: "Jul 2026" },
-      { clientRef: "CLT-009", name: "Goldfields Minerals",  type: "Corporate"  as const, contact: "+233 30 299 5500", email: "compliance@goldfields.gh",   attorney: "E. Darko",  activeCases: 1, totalCases: 3, joined: "Apr 2019" },
-      { clientRef: "CLT-010", name: "Akua Twum",            type: "Individual" as const, contact: "+233 20 767 3344", email: "akuatwum1987@gmail.com",     attorney: "K. Asante", activeCases: 1, totalCases: 1, joined: "Jun 2026" },
-      { clientRef: "CLT-011", name: "Adom Broadcasting",    type: "Corporate"  as const, contact: "+233 30 281 7788", email: "legal@adom.com.gh",          attorney: "A. Mensah", activeCases: 1, totalCases: 2, joined: "Jan 2022" },
-      { clientRef: "CLT-012", name: "Ama Sarpong",          type: "Individual" as const, contact: "+233 55 224 9910", email: "ama.sarpong@hotmail.com",    attorney: "D. Owusu",  activeCases: 0, totalCases: 1, joined: "Jun 2026" },
-    ];
-
-    const clientIds: Record<string, any> = {};
-    for (const c of clientDefs) {
-      const id = await ctx.db.insert("clients", {
-        clientRef: c.clientRef,
-        name: c.name,
-        type: c.type,
-        contact: c.contact,
-        email: c.email,
-        attorney: c.attorney,
-        status: "Active",
-        activeCases: c.activeCases,
-        totalCases: c.totalCases,
-        joined: c.joined,
-      });
-      clientIds[c.clientRef] = id;
-    }
-
-    // ── Cases ────────────────────────────────────────────────────────────────
-    const caseDefs = [
-      { caseNumber: "SKB-2026-047", clientRef: "CLT-001", clientType: "Corporate", type: "Corporate",        attorney: "A. Mensah", status: "Active"  as const, priority: "High"   as const, openedDate: "01 Sep 2026", nextHearing: "18 Sep 2026" },
-      { caseNumber: "SKB-2026-046", clientRef: "CLT-002", clientType: "Individual",type: "Estate & Probate", attorney: "K. Asante", status: "Pending" as const, priority: "Medium" as const, openedDate: "28 Aug 2026", nextHearing: "22 Sep 2026" },
-      { caseNumber: "SKB-2026-045", clientRef: "CLT-003", clientType: "Corporate", type: "Mining & Energy",  attorney: "E. Darko",  status: "Active"  as const, priority: "High"   as const, openedDate: "20 Aug 2026", nextHearing: "25 Sep 2026" },
-      { caseNumber: "SKB-2026-044", clientRef: "CLT-004", clientType: "Individual",type: "Employment",       attorney: "A. Mensah", status: "On Hold" as const, priority: "Low"    as const, openedDate: "15 Aug 2026" },
-      { caseNumber: "SKB-2026-043", clientRef: "CLT-005", clientType: "Corporate", type: "Real Estate",      attorney: "D. Owusu",  status: "Active"  as const, priority: "Medium" as const, openedDate: "10 Aug 2026", nextHearing: "01 Oct 2026" },
-      { caseNumber: "SKB-2026-042", clientRef: "CLT-006", clientType: "Trust",     type: "Estate & Probate", attorney: "K. Asante", status: "Closed"  as const, priority: "Low"    as const, openedDate: "01 Jul 2026" },
-      { caseNumber: "SKB-2026-041", clientRef: "CLT-007", clientType: "Corporate", type: "Telecom & Tech",   attorney: "E. Darko",  status: "Active"  as const, priority: "High"   as const, openedDate: "15 Jul 2026", nextHearing: "03 Oct 2026" },
-      { caseNumber: "SKB-2026-040", clientRef: "CLT-008", clientType: "Individual",type: "Litigation",       attorney: "D. Owusu",  status: "Active"  as const, priority: "Medium" as const, openedDate: "08 Jul 2026", nextHearing: "07 Oct 2026" },
-      { caseNumber: "SKB-2026-039", clientRef: "CLT-009", clientType: "Corporate", type: "Mining & Energy",  attorney: "E. Darko",  status: "Active"  as const, priority: "High"   as const, openedDate: "01 Jul 2026", nextHearing: "20 Sep 2026" },
-      { caseNumber: "SKB-2026-038", clientRef: "CLT-010", clientType: "Individual",type: "Land & Chieftaincy",attorney: "K. Asante",status: "Pending" as const, priority: "Medium" as const, openedDate: "20 Jun 2026", nextHearing: "12 Oct 2026" },
-      { caseNumber: "SKB-2026-037", clientRef: "CLT-011", clientType: "Corporate", type: "Telecom & Tech",   attorney: "A. Mensah", status: "Active"  as const, priority: "Medium" as const, openedDate: "10 Jun 2026", nextHearing: "15 Oct 2026" },
-      { caseNumber: "SKB-2026-036", clientRef: "CLT-012", clientType: "Individual",type: "Employment",       attorney: "D. Owusu",  status: "Closed"  as const, priority: "Low"    as const, openedDate: "01 Jun 2026" },
-    ];
-
-    const caseIds: Record<string, any> = {};
-    for (const c of caseDefs) {
-      const id = await ctx.db.insert("cases", {
-        caseNumber: c.caseNumber,
-        clientId: clientIds[c.clientRef],
-        clientName: clientDefs.find(cl => cl.clientRef === c.clientRef)!.name,
-        clientType: c.clientType,
-        type: c.type,
-        status: c.status,
-        priority: c.priority,
-        attorney: c.attorney,
-        openedDate: c.openedDate,
-        nextHearing: c.nextHearing,
-      });
-      caseIds[c.caseNumber] = id;
-    }
-
-    // ── Invoices ─────────────────────────────────────────────────────────────
-    const invoiceDefs = [
-      { invoiceNumber: "INV-2026-041", clientRef: "CLT-003", caseNum: "SKB-2026-045", description: "Legal services — Aug 2026",   amount: 12500, status: "Sent"    as const, issueDate: "01 Sep 2026", dueDate: "01 Oct 2026", attorney: "E. Darko"  },
-      { invoiceNumber: "INV-2026-040", clientRef: "CLT-001", caseNum: "SKB-2026-047", description: "Retainer — Q3 2026",          amount: 8000,  status: "Paid"    as const, issueDate: "01 Sep 2026", dueDate: "15 Sep 2026", attorney: "A. Mensah" },
-      { invoiceNumber: "INV-2026-039", clientRef: "CLT-009", caseNum: "SKB-2026-039", description: "Consultation & filings — Aug", amount: 8200, status: "Paid"    as const, issueDate: "28 Aug 2026", dueDate: "12 Sep 2026", attorney: "E. Darko"  },
-      { invoiceNumber: "INV-2026-038", clientRef: "CLT-005", caseNum: "SKB-2026-043", description: "Conveyancing services",        amount: 6800,  status: "Overdue" as const, issueDate: "15 Aug 2026", dueDate: "05 Sep 2026", attorney: "D. Owusu"  },
-      { invoiceNumber: "INV-2026-037", clientRef: "CLT-007", caseNum: "SKB-2026-041", description: "Retainer — Aug 2026",         amount: 9500,  status: "Sent"    as const, issueDate: "01 Aug 2026", dueDate: "20 Sep 2026", attorney: "E. Darko"  },
-      { invoiceNumber: "INV-2026-036", clientRef: "CLT-011", caseNum: "SKB-2026-037", description: "Regulatory advisory",         amount: 4200,  status: "Overdue" as const, issueDate: "01 Aug 2026", dueDate: "25 Aug 2026", attorney: "A. Mensah" },
-      { invoiceNumber: "INV-2026-035", clientRef: "CLT-002", caseNum: "SKB-2026-046", description: "Estate administration",       amount: 3500,  status: "Paid"    as const, issueDate: "15 Jul 2026", dueDate: "01 Aug 2026", attorney: "K. Asante" },
-      { invoiceNumber: "INV-2026-034", clientRef: "CLT-008", caseNum: "SKB-2026-040", description: "Litigation services",         amount: 5600,  status: "Sent"    as const, issueDate: "15 Jul 2026", dueDate: "15 Sep 2026", attorney: "D. Owusu"  },
-    ];
-
-    for (const inv of invoiceDefs) {
-      const client = clientDefs.find(c => c.clientRef === inv.clientRef)!;
-      await ctx.db.insert("invoices", {
-        invoiceNumber: inv.invoiceNumber,
-        clientId: clientIds[inv.clientRef],
-        clientName: client.name,
-        caseId: caseIds[inv.caseNum],
-        type: "Legal Services",
-        amount: inv.amount,
-        status: inv.status,
-        issueDate: inv.issueDate,
-        dueDate: inv.dueDate,
-        attorney: inv.attorney,
-        description: inv.description,
-      });
     }
 
     // ── Leave Requests ────────────────────────────────────────────────────────
@@ -439,47 +343,12 @@ export const seed = internalMutation({
       });
     }
 
-    // ── Expense Claims ────────────────────────────────────────────────────────
-    const firstUserId = Object.values(userIds)[0]!;
-
-    const expenseDefs = [
-      { claimRef: "EXP-2026-008", employeeEmail: "y.bonsu@skboafo.gh",    role: "HR Officer",      category: "Training & Development", amount: 1200, date: "12 Sep 2026", submitted: "13 Sep 2026", description: "HR conference registration fee",     status: "Pending"  as const, receipt: true  },
-      { claimRef: "EXP-2026-007", employeeEmail: "k.mensah@skboafo.gh",   role: "Associate",       category: "Client Entertainment",   amount: 450,  date: "10 Sep 2026", submitted: "11 Sep 2026", description: "Client lunch — Ofori & Sons case",   status: "Pending"  as const, receipt: true  },
-      { claimRef: "EXP-2026-006", employeeEmail: "a.asante@skboafo.gh",   role: "Associate",       category: "Transportation",         amount: 180,  date: "08 Sep 2026", submitted: "09 Sep 2026", description: "Taxi to court — SKB-2026-046",        status: "Pending"  as const, receipt: false },
-      { claimRef: "EXP-2026-005", employeeEmail: "k.frimpong@skboafo.gh", role: "Partner",         category: "Office Supplies",        amount: 320,  date: "05 Sep 2026", submitted: "06 Sep 2026", description: "Stationery and filing supplies",       status: "Approved" as const, receipt: true  },
-      { claimRef: "EXP-2026-004", employeeEmail: "a.darko@skboafo.gh",    role: "Paralegal",       category: "Transportation",         amount: 95,   date: "03 Sep 2026", submitted: "04 Sep 2026", description: "Bus pass — court filing trips",        status: "Approved" as const, receipt: true  },
-      { claimRef: "EXP-2026-003", employeeEmail: "n.acheampong@skboafo.gh", role: "Admin",         category: "Office Supplies",        amount: 560,  date: "28 Aug 2026", submitted: "29 Aug 2026", description: "Printer ink & paper restock",          status: "Approved" as const, receipt: true  },
-      { claimRef: "EXP-2026-002", employeeEmail: "k.asare@skboafo.gh",    role: "Partner",         category: "Client Entertainment",   amount: 750,  date: "20 Aug 2026", submitted: "21 Aug 2026", description: "Client dinner — corporate retainer",   status: "Declined" as const, receipt: false },
-      { claimRef: "EXP-2026-001", employeeEmail: "k.mensah@skboafo.gh",   role: "Associate",       category: "Training & Development", amount: 890,  date: "15 Aug 2026", submitted: "16 Aug 2026", description: "Online legal research subscription",   status: "Approved" as const, receipt: true  },
-    ];
-
-    for (const exp of expenseDefs) {
-      const empId = userIds[exp.employeeEmail] ?? firstUserId;
-      await ctx.db.insert("expenseClaims", {
-        claimRef:      exp.claimRef,
-        employeeId:    empId,
-        employeeName:  userDefs.find((u) => u.email === exp.employeeEmail)?.name ?? exp.employeeEmail,
-        role:          exp.role,
-        category:      exp.category,
-        amount:        exp.amount,
-        date:          exp.date,
-        submittedDate: exp.submitted,
-        description:   exp.description,
-        status:        exp.status,
-        receipt:       exp.receipt,
-      });
-    }
-
     return {
       status: "Seed complete — now run: pnpm dlx convex run seed:seedPasswords to create login credentials",
       users: userDefs.length,
-      clients: clientDefs.length,
-      cases: caseDefs.length,
-      invoices: invoiceDefs.length,
       jobs: jobDefs.length,
       onboardees: onboardeeDefs.length,
       exitClearances: exitDefs.length,
-      expenseClaims: expenseDefs.length,
     };
   },
 });

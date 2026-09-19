@@ -9,17 +9,11 @@ import { Icon } from "./Icons";
 
 const PAGE_TITLES: Record<string, string> = {
   "/":                    "Dashboard Overview",
-  "/cases":               "Case Management",
-  "/clients":             "Clients",
-  "/calendar":            "Court Calendar",
-  "/approvals":           "Approvals",
-  "/billing":             "Billing & Invoices",
-  "/documents":           "Documents",
+  "/approvals":           "Leave Approvals",
   "/staff":               "Staff & Team",
   "/announcements":       "Announcements",
   "/settings":            "Settings",
   "/leave":               "My Leave",
-  "/expense-claims":      "My Expenses",
   "/my-performance":      "My Performance",
   "/team-performance":    "Team Performance",
   "/attendance":          "My Attendance",
@@ -32,28 +26,25 @@ const PAGE_TITLES: Record<string, string> = {
   "/hr/leave":            "Leave Register",
   "/hr/employees":        "Employees",
   "/hr/attendance":       "Attendance",
+  "/hr/recruitment":      "Recruitment",
+  "/hr/onboarding":       "Onboarding",
+  "/hr/exit-clearance":   "Exit Clearance",
 };
 
 // ── notification type → icon / colour ────────────────────────────────────────
 
 const NOTIF_ICON: Record<string, string> = {
-  leave_submitted:   "calendar",
-  leave_approved:    "check-circle",
-  leave_declined:    "x",
-  expense_submitted: "receipt",
-  expense_approved:  "check-circle",
-  expense_declined:  "x",
-  announcement:      "team",
+  leave_submitted: "calendar",
+  leave_approved:  "check-circle",
+  leave_declined:  "x",
+  announcement:    "team",
 };
 
 const NOTIF_COLOR: Record<string, { bg: string; color: string }> = {
-  leave_submitted:   { bg: "#EFF4FF", color: "#1d4ed8" },
-  leave_approved:    { bg: "#ECFDF5", color: "#059669" },
-  leave_declined:    { bg: "#FFF5F5", color: "#DC2626" },
-  expense_submitted: { bg: "#FFFBEB", color: "#D97706" },
-  expense_approved:  { bg: "#ECFDF5", color: "#059669" },
-  expense_declined:  { bg: "#FFF5F5", color: "#DC2626" },
-  announcement:      { bg: "#F5F3FF", color: "#7C3AED" },
+  leave_submitted: { bg: "#EFF4FF", color: "#1d4ed8" },
+  leave_approved:  { bg: "#ECFDF5", color: "#059669" },
+  leave_declined:  { bg: "#FFF5F5", color: "#DC2626" },
+  announcement:    { bg: "#F5F3FF", color: "#7C3AED" },
 };
 
 const FALLBACK_ICON  = { bg: "#F1F5F9", color: "#64748B" };
@@ -138,7 +129,7 @@ export default function Header() {
           <Icon name="search" className="w-3.5 h-3.5 text-[#94A3B8] flex-shrink-0" strokeWidth={2} />
           <input
             type="text"
-            placeholder="Search cases, clients..."
+            placeholder="Search employees, leave..."
             className="min-w-0 flex-1 bg-transparent text-[13px] text-[#1e293b] placeholder-[#94A3B8] outline-none"
           />
           <kbd className="text-[10px] text-[#94A3B8] bg-[#EAECF0] px-1.5 py-0.5 rounded font-mono flex-shrink-0 leading-none">⌘K</kbd>
@@ -236,7 +227,7 @@ export default function Header() {
                 <Icon name="bell" className="w-5 h-5 text-[#94A3B8]" />
               </div>
               <p className="text-[13px] font-medium text-[#64748B]">No notifications yet</p>
-              <p className="text-[11px] text-[#94A3B8]">Leave approvals, expense decisions, and announcements will appear here.</p>
+              <p className="text-[11px] text-[#94A3B8]">Leave approvals and announcements will appear here.</p>
             </div>
           ) : (
             notifications.map((n) => {

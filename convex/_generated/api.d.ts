@@ -10,12 +10,8 @@
 
 import type * as announcements from "../announcements.js";
 import type * as auth from "../auth.js";
-import type * as billing from "../billing.js";
-import type * as cases from "../cases.js";
-import type * as clients from "../clients.js";
 import type * as crypto from "../crypto.js";
 import type * as exitClearances from "../exitClearances.js";
-import type * as expenseClaims from "../expenseClaims.js";
 import type * as http from "../http.js";
 import type * as jobApplicants from "../jobApplicants.js";
 import type * as jobPostings from "../jobPostings.js";
@@ -37,12 +33,8 @@ import type {
 declare const fullApi: ApiFromModules<{
   announcements: typeof announcements;
   auth: typeof auth;
-  billing: typeof billing;
-  cases: typeof cases;
-  clients: typeof clients;
   crypto: typeof crypto;
   exitClearances: typeof exitClearances;
-  expenseClaims: typeof expenseClaims;
   http: typeof http;
   jobApplicants: typeof jobApplicants;
   jobPostings: typeof jobPostings;

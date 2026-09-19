@@ -1,25 +1,29 @@
-# S.K. Boafo & Company — Practice Dashboard
+# S.K. Boafo & Company — People & HR Dashboard
 
-Legal practice management dashboard for **S.K. Boafo & Company** (Gye Nyame Chambers). Staff can review caseload, clients, court dates, approvals, billing, documents, and team activity from one workspace.
+HR and people-operations dashboard for **S.K. Boafo & Company** (Gye Nyame Chambers). Staff manage leave, attendance, training, files, messages, and announcements; HR officers also run employees, recruitment, onboarding, exit clearance, projects, and insights.
 
-This is a front-end prototype. Data and sign-in are local demo content stored in the browser — there is no backend yet.
+Legal casework stays in the firm’s existing legal system — this app does not replace cases, clients, court calendar, billing, or legal documents.
 
 ## Features
 
 | Section | Route | What it covers |
 | --- | --- | --- |
-| Dashboard | `/` | Caseload KPIs, recent matters, deadlines, practice-area mix, and attorney summary |
-| Case Management | `/cases` | Matter list, status, and opening a new case |
-| Clients | `/clients` | Client records |
-| Court Calendar | `/calendar` | Hearings and filing dates |
-| Approvals | `/approvals` | Approval queue with preview, approve, and reject |
-| Billing & Invoices | `/billing` | Invoices and outstanding balances (GHS) |
-| Documents | `/documents` | Document repository |
-| Staff & Team | `/staff` | Attorneys and team members |
+| Dashboard | `/` | HR home: pending leave, attendance snapshot, training, announcements, team |
+| Leave Approvals | `/approvals` | Approve / decline leave requests |
+| My Leave | `/leave` | Personal leave requests |
+| Leave Register | `/hr/leave` | Firm-wide leave (HR) |
+| Attendance | `/attendance`, `/hr/attendance` | Personal and firm attendance |
+| Performance | `/my-performance`, `/team-performance` | Individual and team reviews |
+| Files / Messages | `/files`, `/messages` | Personal files and messaging |
 | Announcements | `/announcements` | Firm notices |
-| Settings | `/settings` | Firm information and preferences |
-
-The sidebar also supports a role switcher (Managing Partner, Partner, Associate, Paralegal, Admin) and a collapsible profile menu with sign-out.
+| Training | `/training`, `/hr/training` | Courses and HR training management |
+| Employees | `/hr/employees` | Employee directory (HR) |
+| Recruitment | `/hr/recruitment` | Job postings and applicants |
+| Onboarding | `/hr/onboarding` | New-hire checklists |
+| Exit clearance | `/hr/exit-clearance` | Leavers checklist |
+| Projects / Insights | `/projects`, `/insights` | HR officer only |
+| Staff & Team | `/staff` | People roster (managing partner / admin) |
+| Settings | `/settings` | Preferences |
 
 ## Tech stack
 
@@ -27,6 +31,7 @@ The sidebar also supports a role switcher (Managing Partner, Partner, Associate,
 - React 19
 - TypeScript
 - Tailwind CSS 4
+- [Convex](https://convex.dev) + Convex Auth
 
 ## Getting started
 
@@ -34,10 +39,11 @@ Requires Node.js and [pnpm](https://pnpm.io) (this repo pins `pnpm@10.33.0`).
 
 ```bash
 pnpm install
+pnpm exec convex dev   # or link an existing Convex deployment
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Unauthenticated visits are expected to start at `/login`.
+Open [http://localhost:3000](http://localhost:3000). Unauthenticated visits start at `/login`.
 
 Other scripts:
 
@@ -71,8 +77,12 @@ Click a row on the login screen to autofill, or use credentials from the seed (e
 ## Project layout
 
 ```
-app/            # routes (dashboard, cases, clients, calendar, …)
+app/            # routes (HR dashboard, leave, training, …)
+convex/         # schema, auth, seed, domain modules
 components/     # AppShell, Sidebar, Header, Modal, Icons
+docs/           # Product PRD and collaborator notes
 ```
 
 Firm colours used in the UI are navy `#0B2349` and gold `#C9A227`.
+
+For product scope, roles, and planned work, see [docs/PRD.md](docs/PRD.md).
